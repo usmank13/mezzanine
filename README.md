@@ -113,6 +113,51 @@ Outputs (in `--out`):
 
 ---
 
+## Robotics: LeRobot latent dynamics + planning (multiple morphologies)
+
+This recipe mirrors the **same latent-dynamics distillation + action-shuffle counterfactual**
+as `iphyre_latent_dynamics`, and adds a lightweight downstream demo:
+**goal-conditioned action retrieval** (select the action that reaches a target latent state).
+
+It also includes an optional **V-JEPA 2-AC-style 1-step CEM planning objective** in latent space
+as an offline proxy.
+
+### PushT (image; single-arm manipulation)
+```bash
+mezzanine run lerobot_latent_dynamics --out out_pusht \
+  --repo_id lerobot/pusht_image \
+  --camera_key observation.image \
+  --action_key action \
+  --n_train 4000 --n_test 2000 --delta_steps 1 \
+  --do_planning --plan_candidates 32 --plan_eval 512 \
+  --do_cem --cem_eval 128
+```
+
+### ALOHA Sim (image; bimanual manipulation)
+```bash
+mezzanine run lerobot_latent_dynamics --out out_aloha_sim \
+  --repo_id lerobot/aloha_sim_transfer_cube_scripted_image \
+  --camera_key observation.images.top \
+  --action_key action \
+  --n_train 4000 --n_test 2000 --delta_steps 1 \
+  --do_planning
+```
+
+### LIBERO-10 (image; multi-task manipulation)
+```bash
+mezzanine run lerobot_latent_dynamics --out out_libero \
+  --repo_id lerobot/libero_10_image_subtask \
+  --camera_key observation.images.image \
+  --action_key action \
+  --n_train 4000 --n_test 2000 --delta_steps 1 \
+  --do_planning
+```
+
+**Make/Break condition:** all latent-dynamics recipes use the same criterion:
+action must improve retrieval (vs no-action) and action-shuffle must hurt, using mean-rank/R@10 thresholds.
+
+---
+
 ## Notes on extending
 
 ### Add a new adapter

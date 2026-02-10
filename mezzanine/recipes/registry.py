@@ -19,6 +19,12 @@ except Exception:
     pass
 
 try:  # pragma: no cover
+    from .lerobot_latent_dynamics import LeRobotLatentDynamicsRecipe
+    _try_register(LeRobotLatentDynamicsRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
     from .hf_text_order_distill import HFTextOrderDistillRecipe
     _try_register(HFTextOrderDistillRecipe)
 except Exception:
@@ -40,6 +46,18 @@ except Exception:
 try:  # pragma: no cover
     from .lj_fluid_distill import LJFluidDistillRecipe
     _try_register(LJFluidDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .finance_csv_bar_offset_distill import FinanceCSVBarOffsetDistillRecipe
+    _try_register(FinanceCSVBarOffsetDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .audio_warrant_mix import AudioWarrantMixRecipe
+    _try_register(AudioWarrantMixRecipe)
 except Exception:
     pass
 
