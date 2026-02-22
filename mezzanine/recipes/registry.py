@@ -50,6 +50,12 @@ except Exception:
     pass
 
 try:  # pragma: no cover
+    from .qg_jets_distill import QGJetsDistillRecipe
+    _try_register(QGJetsDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
     from .finance_csv_bar_offset_distill import FinanceCSVBarOffsetDistillRecipe
     _try_register(FinanceCSVBarOffsetDistillRecipe)
 except Exception:
@@ -58,6 +64,54 @@ except Exception:
 try:  # pragma: no cover
     from .audio_warrant_mix import AudioWarrantMixRecipe
     _try_register(AudioWarrantMixRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .crystal_spacegroup_distill import CrystalSpaceGroupDistillRecipe
+    _try_register(CrystalSpaceGroupDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .neuralgcm_ens_warrant_distill import NeuralGCMEnsWarrantDistillRecipe
+    _try_register(NeuralGCMEnsWarrantDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .kepler_root_distill import KeplerRootDistillRecipe
+    _try_register(KeplerRootDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .linear_system_permutation_distill import LinearSystemPermutationDistillRecipe
+    _try_register(LinearSystemPermutationDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .ode_time_origin_distill import ODETimeOriginDistillRecipe
+    _try_register(ODETimeOriginDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .integration_circular_shift_distill import IntegrationCircularShiftDistillRecipe
+    _try_register(IntegrationCircularShiftDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .pdebench_translation_distill import PDEBenchTranslationDistillRecipe
+    _try_register(PDEBenchTranslationDistillRecipe)
+except Exception:
+    pass
+
+try:  # pragma: no cover
+    from .eigen_permutation_distill import EigenPermutationDistillRecipe
+    _try_register(EigenPermutationDistillRecipe)
 except Exception:
     pass
 

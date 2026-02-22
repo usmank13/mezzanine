@@ -329,6 +329,15 @@ class GWSMBHVizRecipe(Recipe):
         p.add_argument("--chirp_fps", type=int, default=24)
         p.add_argument("--chirp_frames", type=int, default=240)
 
+        # Synthetic psi4 VTK export (single view)
+        p.add_argument("--export_psi4_vtk", action="store_true", help="Write a synthetic psi4 VTK time series from the reference view.")
+        p.add_argument("--psi4_vtk_grid", type=int, default=96, help="Grid size per axis for VTK export.")
+        p.add_argument("--psi4_vtk_frames", type=int, default=60, help="Number of VTK frames to write.")
+        p.add_argument("--psi4_vtk_extent", type=float, default=0.0, help="Spatial extent (<=0 means auto from time window).")
+        p.add_argument("--psi4_vtk_c", type=float, default=1.0, help="Wave speed used for retarded-time propagation.")
+        p.add_argument("--psi4_vtk_no_norm", action="store_true", help="Disable normalization of the psi4 proxy.")
+        p.add_argument("--psi4_vtk_outdir", type=str, default=None, help="Output directory for VTK series (default: <out>/psi4_vtk).")
+
         p.add_argument("--out_dir", type=str, default=str(self.out_dir))
 
         args = p.parse_args(argv)
@@ -507,6 +516,8 @@ class GWSMBHVizRecipe(Recipe):
 
         chirp_meta: Optional[Dict[str, float]] = None
         chirp_path: Optional[str] = None
+        psi4_vtk_dir: Optional[str] = None
+        psi4_vtk_meta: Optional[Dict[str, float]] = None
         if bool(args.make_chirp_gif):
             annotate = (
                 f"m1={intr['m1_solar']:.3g} Msun  m2={intr['m2_solar']:.3g} Msun\n"
@@ -528,6 +539,25 @@ class GWSMBHVizRecipe(Recipe):
             )
             chirp_path = str(out_dir / "chirp.gif")
 
+        if bool(args.export_psi4_vtk):
+            from ..viz.gw_psi4_vtk import Psi4VTKConfig, write_psi4_vtk_series
+
+            sel = (t_ref >= t_start) & (t_ref <= t_end)
+            t_vtk = t_ref[sel]
+            s_vtk = s_ref[sel]
+
+            vtk_dir = Path(args.psi4_vtk_outdir) if args.psi4_vtk_outdir else (out_dir / "psi4_vtk")
+            cfg = Psi4VTKConfig(
+                grid=int(args.psi4_vtk_grid),
+                frames=int(args.psi4_vtk_frames),
+                extent=float(args.psi4_vtk_extent),
+                c=float(args.psi4_vtk_c),
+                prefix="psi4",
+                normalize=not bool(args.psi4_vtk_no_norm),
+            )
+            psi4_vtk_meta = write_psi4_vtk_series(t=t_vtk, strain=s_vtk, out_dir=vtk_dir, cfg=cfg)
+            psi4_vtk_dir = str(vtk_dir)
+
         result = {
             "exp": self.NAME,
             "world": {"adapter": "gw_merger_lal", "config": asdict(wcfg), "meta": data.get("meta", {})},
@@ -543,7 +573,9 @@ class GWSMBHVizRecipe(Recipe):
                 "spectrogram_png": str(out_dir / "spectrogram.png"),
                 "latent_pca_png": str(out_dir / "latent_pca.png"),
                 "chirp_gif": chirp_path,
+                "psi4_vtk_dir": psi4_vtk_dir,
             },
+            "psi4_vtk_meta": psi4_vtk_meta,
         }
 
         (out_dir / "results.json").write_text(json.dumps(result, indent=2))

@@ -186,6 +186,7 @@ class GWObservationLALConfig:
     psd_path: Optional[str] = None  # path to (f, psd) file; overrides psd_model if set
     psd_model: Optional[str] = None  # optional LAL PSD name/model (best-effort)
     whiten: bool = False  # if True, return strain/sqrt(psd)
+    return_polarizations: bool = False  # if True, include hp_fd/hc_fd in views
 
     def validate(self) -> None:
         if not (self.delta_f_hz > 0):
@@ -378,7 +379,7 @@ class GWObservationLALSymmetry(Symmetry):
             denom = np.sqrt(np.clip(psd, 1e-30, None)).astype(np.float32)
             strain = (strain / denom).astype(np.complex64)
 
-        return {
+        out = {
             "freqs_hz": freqs,
             "strain_fd": strain,
             "psd": psd,
@@ -394,6 +395,10 @@ class GWObservationLALSymmetry(Symmetry):
                 "approximant": str(approx_name),
             },
         }
+        if cfg.return_polarizations:
+            out["hp_fd"] = hp_fd
+            out["hc_fd"] = hc_fd
+        return out
 
 
 # Register

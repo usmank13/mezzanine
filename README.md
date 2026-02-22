@@ -61,6 +61,11 @@ pip install -e ".[qg]"
 pip install pillow  # only needed for --make_gif
 ```
 
+With NeuralGCM / WeatherBench2 (Zarr IO):
+```bash
+pip install -e ".[weather]"
+```
+
 Everything:
 ```bash
 pip install -e ".[all]"
@@ -119,6 +124,33 @@ Outputs (in `--out`):
 
 ---
 
+## Numerical kernels (toy): fast symmetry-preserving surrogates
+
+These small numerical experiments make the compute story concrete:
+
+- A symmetry-corrected **teacher** often needs **K forward passes per example** (orbit-averaging over symmetry views).
+- A distilled **student** matches that orbit-averaged target in **one forward pass** (lower latency / cost at inference).
+
+Generate toy datasets:
+
+```bash
+python examples/kepler_generate_dataset.py --out data/kepler_root_toy.npz --n_train 50000 --n_test 10000
+python examples/linear_system_generate_dataset.py --out data/linear_system_toy.npz --n_train 50000 --n_test 10000
+python examples/ode_generate_dataset.py --out data/ode_lorenz_toy.npz --system lorenz --n_traj 400 --t_max 40 --dt 0.01
+python examples/integration_generate_dataset.py --out data/integration_toy.npz --n_train 50000 --n_test 10000 --n_grid 128
+python examples/eigen_generate_dataset.py --out data/eigen_toy.npz --n_train 20000 --n_test 5000 --n 64 --density 0.05 --k 5
+```
+
+Run a recipe:
+
+```bash
+mezzanine run kepler_root_distill --out out_kepler --dataset data/kepler_root_toy.npz --k_train 4 --k_test 16
+```
+
+More details: `docs/physics_addons.md`.
+
+---
+
 ## Particle physics: quark/gluon jets (EnergyFlow)
 
 This recipe measures the warrant gap under **particle permutation + internal SO(2) rotations**
@@ -144,6 +176,30 @@ Outputs (in `--out`):
 - `results.json`
 - `probs_test_views.npz`
 - `jet_nuisance.gif` (only if `--make_gif`)
+
+---
+
+## Weather: NeuralGCM ensemble distillation (WeatherBench2)
+
+This recipe measures a *regression* warrant gap under **ensemble-member exchangeability** (and optionally a lightweight
+field “codec” symmetry), then distills the ensemble mean into a single-pass head.
+
+```bash
+mezzanine run neuralgcm_ens_warrant_distill --out out_neuralgcm \
+  --lead_hours 24 \
+  --variables temperature,geopotential \
+  --num_members 50 --k_train 8 --k_test 16 \
+  --steps 2000 --batch 8192
+```
+
+Notes:
+- The default `--members_zarr/--mean_zarr` point at public `gs://weatherbench2/...` Zarr stores.
+- Use `--hero` to emit `hero.gif` and per-lead diagnostics.
+
+Outputs (in `--out`):
+- `results.json`
+- `diagnostics.png`
+- `head_plain.pt`, `head_sym.pt`
 
 ---
 

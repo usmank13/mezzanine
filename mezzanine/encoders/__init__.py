@@ -14,6 +14,13 @@ try:  # pragma: no cover
 except Exception:
     pass
 
+# Jet-physics encoders (numpy-only). Keep optional.
+try:  # pragma: no cover
+    from .qg import QGFlattenEncoder, QGFlattenEncoderConfig, QGEEC2Encoder, QGEEC2EncoderConfig
+    __all__ += ["QGFlattenEncoder","QGFlattenEncoderConfig","QGEEC2Encoder","QGEEC2EncoderConfig"]
+except Exception:
+    pass
+
 # Vision encoders are optional (they may require torchvision / image backends).
 try:  # pragma: no cover
     from .hf_vision import HFVisionEncoder, HFVisionEncoderConfig  # type: ignore

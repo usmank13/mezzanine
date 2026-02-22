@@ -38,6 +38,24 @@ iphyre = ["pygame>=2.1.2", "pymunk", "iphyre"]
 # Molecular dynamics / LJ examples
 md = ["h5py>=3.9", "scipy>=1.10"]
 
+# Materials / crystals (Matbench + symmetries)
+materials = [
+  "pymatgen>=2024.0",
+  "matbench>=0.6",
+]
+
+# Materials GNN baselines (optional)
+materials_gnn = [
+  "matgl>=2.0.6",
+  "dgl>=2.2.0",
+]
+
+# Jet physics / QG examples
+qg = ["energyflow"]
+
+# Weather / NeuralGCM examples
+weather = ["xarray", "zarr", "gcsfs"]
+
 # Logging
 wandb = ["wandb>=0.16"]
 tensorboard = ["tensorboard>=2.15"]
@@ -57,6 +75,10 @@ all = [
   "tensorboard>=2.15",
   "h5py>=3.9",
   "scipy>=1.10",
+  "energyflow",
+  "xarray",
+  "zarr",
+  "gcsfs",
 ]
 
 [project.scripts]

@@ -48,7 +48,7 @@ def cmd_run(args: argparse.Namespace, unknown: list[str]) -> None:
     print(json.dumps(result, indent=2))
 
 
-def main() -> None:
+def main_args(argv: list[str] | None = None) -> None:
     # Ensure registries are populated
     load_builtin_plugins()
 
@@ -73,11 +73,16 @@ def main() -> None:
     p_run.add_argument("--overrides", type=str, default=None, help="JSON dict of config overrides applied as defaults.")
 
     # We intentionally pass-through all unknown args to the recipe.
-    args, unknown = p.parse_known_args()
+    args, unknown = p.parse_known_args(argv)
     if args.cmd == "run":
         cmd_run(args, unknown)
     else:
         args.func(args)
+
+
+def main() -> None:
+    import sys
+    main_args(sys.argv[1:])
 
 
 if __name__ == "__main__":
