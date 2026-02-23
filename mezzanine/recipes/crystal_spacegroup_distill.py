@@ -61,7 +61,7 @@ def _require_matgl_dgl():
     except Exception as e:  # pragma: no cover
         raise ImportError(
             "Teacher family `matgl_*` requires optional dependencies `matgl` and `dgl`. "
-            "Install via: pip install -e \".[materials]\" && pip install matgl dgl"
+            'Install via: pip install -e ".[materials]" && pip install matgl dgl'
         ) from e
 
 
@@ -105,7 +105,9 @@ def _matgl_predict_structures(
             y = model(bg, state_attr=st)
             y = y.reshape(-1, 1).detach().cpu().numpy().astype(np.float32)
             preds.append(y)
-    return np.concatenate(preds, axis=0) if preds else np.zeros((0, 1), dtype=np.float32)
+    return (
+        np.concatenate(preds, axis=0) if preds else np.zeros((0, 1), dtype=np.float32)
+    )
 
 
 def _train_matgl_regressor(
@@ -137,7 +139,9 @@ def _train_matgl_regressor(
         def __init__(self, structures: List[Any], y: np.ndarray):
             self.structures = structures
             self.y = np.asarray(y, dtype=np.float32).reshape(-1, 1)
-            self._cache: List[tuple[Any, Any] | None] = [None for _ in range(len(self.structures))]
+            self._cache: List[tuple[Any, Any] | None] = [
+                None for _ in range(len(self.structures))
+            ]
 
         def __len__(self) -> int:
             return int(len(self.structures))
@@ -146,7 +150,9 @@ def _train_matgl_regressor(
             j = int(idx)
             cached = self._cache[j]
             if cached is None:
-                cached = _matgl_structure_to_graph(self.structures[j], graph_converter=graph_converter)
+                cached = _matgl_structure_to_graph(
+                    self.structures[j], graph_converter=graph_converter
+                )
                 self._cache[j] = cached
             g, st = cached
             return g, st, torch.tensor(self.y[int(idx)], dtype=torch.float32)
@@ -159,7 +165,13 @@ def _train_matgl_regressor(
         return bg, st, yb
 
     ds = _DS(structures_train, y_train)
-    dl = DataLoader(ds, batch_size=int(batch_size), shuffle=True, drop_last=True, collate_fn=_collate)
+    dl = DataLoader(
+        ds,
+        batch_size=int(batch_size),
+        shuffle=True,
+        drop_last=True,
+        collate_fn=_collate,
+    )
     it = iter(dl)
 
     model = model.to(device)
@@ -191,7 +203,9 @@ def _train_matgl_regressor(
         batch_size=int(batch_size),
         device=device,
     )
-    mse_val = float(np.mean((yhat_val - np.asarray(y_val, dtype=np.float32).reshape(-1, 1)) ** 2))
+    mse_val = float(
+        np.mean((yhat_val - np.asarray(y_val, dtype=np.float32).reshape(-1, 1)) ** 2)
+    )
     return {"mse_val": mse_val}
 
 
@@ -445,7 +459,9 @@ class CrystalSpaceGroupDistillRecipe(Recipe):
 
             element_types = get_element_list(structures_train_kept)
             if teacher_family == "matgl_megnet":
-                teacher = MEGNet(dropout=float(args.dropout), element_types=element_types)
+                teacher = MEGNet(
+                    dropout=float(args.dropout), element_types=element_types
+                )
             elif teacher_family == "matgl_m3gnet":
                 teacher = M3GNet(
                     dropout=float(args.dropout),
@@ -465,7 +481,8 @@ class CrystalSpaceGroupDistillRecipe(Recipe):
                 raise ValueError(f"Unknown teacher_family: {teacher_family}")
 
             teacher_graph_converter = Structure2Graph(
-                element_types=element_types, cutoff=float(getattr(teacher, "cutoff", 5.0))
+                element_types=element_types,
+                cutoff=float(getattr(teacher, "cutoff", 5.0)),
             )
 
             teacher_metrics = _train_matgl_regressor(
@@ -500,14 +517,20 @@ class CrystalSpaceGroupDistillRecipe(Recipe):
         for j in range(Kt):
             vj = []
             for i, ex in enumerate(test_kept):
-                exj = sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) if j > 0 else ex
+                exj = (
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    if j > 0
+                    else ex
+                )
                 vj.append(exj)
             if teacher_family == "mlp":
                 Xj, _ = _featurize_structures(vj, max_atoms=int(args.max_atoms))
                 preds.append(predict(teacher, Xj, device=device))
             else:
                 if teacher_graph_converter is None:
-                    raise RuntimeError("Internal error: teacher_graph_converter missing for matgl_* teacher.")
+                    raise RuntimeError(
+                        "Internal error: teacher_graph_converter missing for matgl_* teacher."
+                    )
                 preds.append(
                     _matgl_predict_structures(
                         teacher,
@@ -526,7 +549,11 @@ class CrystalSpaceGroupDistillRecipe(Recipe):
         for j in range(Kd):
             vj = []
             for i, ex in enumerate(train_kept):
-                exj = sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j)) if j > 0 else ex
+                exj = (
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j))
+                    if j > 0
+                    else ex
+                )
                 vj.append(exj)
             Xj, _ = _featurize_structures(vj, max_atoms=int(args.max_atoms))
             if X_views is not None:
@@ -535,7 +562,9 @@ class CrystalSpaceGroupDistillRecipe(Recipe):
                 y_soft_views.append(predict(teacher, Xj, device=device))
             else:
                 if teacher_graph_converter is None:
-                    raise RuntimeError("Internal error: teacher_graph_converter missing for matgl_* teacher.")
+                    raise RuntimeError(
+                        "Internal error: teacher_graph_converter missing for matgl_* teacher."
+                    )
                 y_soft_views.append(
                     _matgl_predict_structures(
                         teacher,
@@ -589,7 +618,11 @@ class CrystalSpaceGroupDistillRecipe(Recipe):
         for j in range(Kt):
             vj = []
             for i, ex in enumerate(test_kept):
-                exj = sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) if j > 0 else ex
+                exj = (
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    if j > 0
+                    else ex
+                )
                 vj.append(exj)
             Xj, _ = _featurize_structures(vj, max_atoms=int(args.max_atoms))
             preds_s.append(predict(student, Xj, device=device))

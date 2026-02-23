@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -25,6 +24,7 @@ def load_mtx(path: Path):
     A = mmread(str(path))
     try:
         import scipy.sparse as sp  # type: ignore
+
         if sp.issparse(A):
             A = A.tocsr()
     except Exception:
@@ -57,7 +57,9 @@ def main() -> None:
     ap.add_argument("--n_test", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=0)
 
-    ap.add_argument("--mtx", type=str, default=None, help="Optional: Matrix Market .mtx file")
+    ap.add_argument(
+        "--mtx", type=str, default=None, help="Optional: Matrix Market .mtx file"
+    )
     ap.add_argument("--n", type=int, default=32, help="Subproblem dimension")
     ap.add_argument(
         "--make_spd",
@@ -66,7 +68,9 @@ def main() -> None:
         action="store_true",
         help="Convert extracted submatrices to SPD (alias: --spd)",
     )
-    ap.add_argument("--diag_shift", type=float, default=1e-3, help="Diagonal regularization")
+    ap.add_argument(
+        "--diag_shift", type=float, default=1e-3, help="Diagonal regularization"
+    )
     ap.add_argument(
         "--density",
         type=float,
@@ -96,7 +100,9 @@ def main() -> None:
             A_big = A_big[:m, :m]
             n_big = m
         if n_big < n:
-            raise ValueError(f"Matrix is too small (n_big={n_big}) for subproblem n={n}")
+            raise ValueError(
+                f"Matrix is too small (n_big={n_big}) for subproblem n={n}"
+            )
         source = {"type": "mtx", "path": str(args.mtx), "n_big": n_big}
     else:
         # Synthetic fallback: random SPD

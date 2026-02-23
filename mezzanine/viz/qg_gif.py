@@ -9,7 +9,9 @@ import numpy as np
 try:  # pragma: no cover
     from PIL import Image, ImageDraw, ImageFont
 except Exception as e:  # pragma: no cover
-    raise ImportError("Pillow is required for GIF visualisation. Install with: pip install pillow") from e
+    raise ImportError(
+        "Pillow is required for GIF visualisation. Install with: pip install pillow"
+    ) from e
 
 
 def _wrap_phi(phi: np.ndarray) -> np.ndarray:
@@ -139,7 +141,7 @@ def write_jet_nuisance_gif(
         stud_p = float(p_student_views[j, highlight_class])
 
         # Text overlay
-        title = f"Jet nuisance view {j+1}/{K}"
+        title = f"Jet nuisance view {j + 1}/{K}"
         truth = f"truth: {class_names[int(label)]}"
         pb = f"baseline P({class_names[highlight_class]}) = {base_p:.2f}"
         ps = f"student  P({class_names[highlight_class]}) = {stud_p:.2f}"

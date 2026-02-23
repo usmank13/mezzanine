@@ -25,6 +25,7 @@ def load_mtx(path: Path):
     A = mmread(str(path))
     try:
         import scipy.sparse as sp  # type: ignore
+
         if sp.issparse(A):
             A = A.tocsr()
     except Exception:
@@ -48,7 +49,9 @@ def main() -> None:
     ap.add_argument("--n_test", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=0)
 
-    ap.add_argument("--mtx", type=str, default=None, help="Optional: Matrix Market .mtx file")
+    ap.add_argument(
+        "--mtx", type=str, default=None, help="Optional: Matrix Market .mtx file"
+    )
     ap.add_argument("--n", type=int, default=32)
     ap.add_argument(
         "--density",
@@ -56,7 +59,9 @@ def main() -> None:
         default=None,
         help="Synthetic-only: density of the random symmetric sparsity pattern (0<density<=1).",
     )
-    ap.add_argument("--k", type=int, default=5, help="How many smallest eigenvalues to store")
+    ap.add_argument(
+        "--k", type=int, default=5, help="How many smallest eigenvalues to store"
+    )
     ap.add_argument("--diag_shift", type=float, default=1e-3)
     args = ap.parse_args()
 
@@ -81,7 +86,9 @@ def main() -> None:
             A_big = A_big[:m, :m]
             n_big = m
         if n_big < n:
-            raise ValueError(f"Matrix is too small (n_big={n_big}) for subproblem n={n}")
+            raise ValueError(
+                f"Matrix is too small (n_big={n_big}) for subproblem n={n}"
+            )
         source = {"type": "mtx", "path": str(args.mtx), "n_big": n_big}
     else:
         A_big = None

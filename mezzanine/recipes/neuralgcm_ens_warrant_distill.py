@@ -62,7 +62,9 @@ def _require_neuralgcm_zarr_deps(*, members_zarr: str, mean_zarr: str) -> None:
         )
 
 
-def _open_zarr_compat(xr: Any, path: str, *, storage_options: Dict[str, Any] | None) -> Any:
+def _open_zarr_compat(
+    xr: Any, path: str, *, storage_options: Dict[str, Any] | None
+) -> Any:
     kwargs: Dict[str, Any] = {"chunks": None}
     if storage_options is not None:
         kwargs["storage_options"] = storage_options
@@ -132,7 +134,9 @@ def _stack_members(
     return np.stack(mats, axis=-1)  # [K,P,V]
 
 
-def _subsample_points(Xv: np.ndarray, Y: np.ndarray, n: int, seed: int) -> Tuple[np.ndarray, np.ndarray]:
+def _subsample_points(
+    Xv: np.ndarray, Y: np.ndarray, n: int, seed: int
+) -> Tuple[np.ndarray, np.ndarray]:
     if n <= 0 or Xv.shape[1] <= n:
         return Xv, Y
     rng = np.random.default_rng(int(seed))
@@ -143,7 +147,9 @@ def _subsample_points(Xv: np.ndarray, Y: np.ndarray, n: int, seed: int) -> Tuple
 def _choose_level_idx(ds: Any, level_hpa: float | None) -> int | None:
     if level_hpa is None:
         return None
-    if ("level" not in getattr(ds, "coords", {})) and ("level" not in getattr(ds, "dims", {})):
+    if ("level" not in getattr(ds, "coords", {})) and (
+        "level" not in getattr(ds, "dims", {})
+    ):
         return None
     lv = np.asarray(ds["level"].values, dtype=np.float64)
     target = float(level_hpa)
@@ -152,7 +158,9 @@ def _choose_level_idx(ds: Any, level_hpa: float | None) -> int | None:
     return int(np.argmin(np.abs(lv - target)))
 
 
-def _plot_diagnostics(out_dir: Path, *, metrics: Dict[str, Dict[str, float]], verdict: Dict[str, Any]) -> Path:
+def _plot_diagnostics(
+    out_dir: Path, *, metrics: Dict[str, Dict[str, float]], verdict: Dict[str, Any]
+) -> Path:
     import matplotlib.pyplot as plt
 
     methods = list(metrics.keys())
@@ -174,7 +182,9 @@ def _plot_diagnostics(out_dir: Path, *, metrics: Dict[str, Dict[str, float]], ve
     ax2.tick_params(axis="x", rotation=20)
 
     v = verdict.get("verdict", False)
-    fig.suptitle(f"neuralgcm_ens_warrant_distill — {'MAKE ✅' if v else 'BREAK / INCONCLUSIVE ❌'}")
+    fig.suptitle(
+        f"neuralgcm_ens_warrant_distill — {'MAKE ✅' if v else 'BREAK / INCONCLUSIVE ❌'}"
+    )
     fig.tight_layout()
 
     path = out_dir / "diagnostics.png"
@@ -323,7 +333,9 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
         n_train = int(args.n_train_times)
         n_val = int(args.n_val_times)
         n_test = int(args.n_test_times)
-        idx = deterministic_subsample_indices(n_total, n_train + n_val + n_test, seed=int(ctx.seed))
+        idx = deterministic_subsample_indices(
+            n_total, n_train + n_val + n_test, seed=int(ctx.seed)
+        )
         train_idx = idx[:n_train]
         val_idx = idx[n_train : n_train + n_val]
         test_idx = idx[n_train + n_val :]
@@ -352,21 +364,31 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
                     used.add(r)
             return chosen
 
-        def load_block(t: int, K: int, *, level_idx: int | None) -> Tuple[np.ndarray, np.ndarray, List[int]]:
+        def load_block(
+            t: int, K: int, *, level_idx: int | None
+        ) -> Tuple[np.ndarray, np.ndarray, List[int]]:
             mems = sample_mems(K, t, "mems")
             print(f"[io] t={t} loading mean + {len(mems)} members")
             t0 = time.time()
 
-            ds_mean = mean[variables].isel(time=int(t), prediction_timedelta=lead_idx).load()
-            ds_mem = members[variables].isel(
-                time=int(t),
-                prediction_timedelta=lead_idx,
-                realization=mems,
-            ).load()
+            ds_mean = (
+                mean[variables].isel(time=int(t), prediction_timedelta=lead_idx).load()
+            )
+            ds_mem = (
+                members[variables]
+                .isel(
+                    time=int(t),
+                    prediction_timedelta=lead_idx,
+                    realization=mems,
+                )
+                .load()
+            )
 
             Y = _stack_mean(ds_mean, variables, level_idx=level_idx)
             Xv = _stack_members(ds_mem, variables, mems=None, level_idx=level_idx)
-            Xv, Y = _subsample_points(Xv, Y, int(args.max_points_per_time), seed=_seed32(ctx.seed, "sub", t))
+            Xv, Y = _subsample_points(
+                Xv, Y, int(args.max_points_per_time), seed=_seed32(ctx.seed, "sub", t)
+            )
             print(f"[io] t={t} loaded in {time.time() - t0:.1f}s")
             return Xv, Y, mems
 
@@ -403,7 +425,10 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
         if bool(args.use_codec):
             chunk = 200000
             for i in range(0, int(Xn_train_sym.shape[0]), chunk):
-                Xn_train_sym[i : i + chunk] = codec_sym.sample(Xn_train_sym[i : i + chunk], seed=_seed32(ctx.seed, "codec_train", i))
+                Xn_train_sym[i : i + chunk] = codec_sym.sample(
+                    Xn_train_sym[i : i + chunk],
+                    seed=_seed32(ctx.seed, "codec_train", i),
+                )
 
         # --- Val (optional): canonical-only ---
         Xn_val_plain = Yn_val_plain = None
@@ -434,7 +459,9 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
             Yn_val_sym = _std(Y_val_sym, mu, sig)
 
             if bool(args.use_codec):
-                Xn_val_sym = codec_sym.sample(Xn_val_sym, seed=_seed32(ctx.seed, "codec_val"))
+                Xn_val_sym = codec_sym.sample(
+                    Xn_val_sym, seed=_seed32(ctx.seed, "codec_val")
+                )
 
         head_cfg = MLPRegHeadConfig(
             in_dim=int(V),
@@ -485,7 +512,9 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
                 return Xn
             Xn2 = Xn.copy()
             for j in range(int(Xn2.shape[0])):
-                Xn2[j] = codec_sym.sample(Xn2[j], seed=_seed32(ctx.seed, "codec_test", t, j))
+                Xn2[j] = codec_sym.sample(
+                    Xn2[j], seed=_seed32(ctx.seed, "codec_test", t, j)
+                )
             return Xn2
 
         def pred_views(method: str, Xn: np.ndarray, Yn: np.ndarray) -> np.ndarray:
@@ -496,16 +525,23 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
                 m = Xn.mean(axis=0, keepdims=True)
                 return np.repeat(m, K, axis=0)
             if method == "plain":
-                return predict_regression(plain_head, Xn.reshape(K * P, V), device=device).reshape(K, P, V)
+                return predict_regression(
+                    plain_head, Xn.reshape(K * P, V), device=device
+                ).reshape(K, P, V)
             if method == "sym":
-                return predict_regression(sym_head, Xn.reshape(K * P, V), device=device).reshape(K, P, V)
+                return predict_regression(
+                    sym_head, Xn.reshape(K * P, V), device=device
+                ).reshape(K, P, V)
             if method == "teacher":
                 m = Yn[None, :, :]
                 return np.repeat(m, K, axis=0)
             raise ValueError(method)
 
         methods = ["base", "plain", "sym", "kmean", "teacher"]
-        agg: Dict[str, Dict[str, float]] = {m: {"mse_view": 0.0, "mse_canon": 0.0, "gap": 0.0, "pair": 0.0} for m in methods}
+        agg: Dict[str, Dict[str, float]] = {
+            m: {"mse_view": 0.0, "mse_canon": 0.0, "gap": 0.0, "pair": 0.0}
+            for m in methods
+        }
         n_blocks = 0
 
         for t in test_idx:
@@ -516,9 +552,13 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
 
             for m in methods:
                 Ypred = pred_views(m, Xn, Yn)  # [K,P,V]
-                mse_view = float(np.mean([mse(Ypred[j], Yn) for j in range(int(Ypred.shape[0]))]))
+                mse_view = float(
+                    np.mean([mse(Ypred[j], Yn) for j in range(int(Ypred.shape[0]))])
+                )
                 mse_canon = float(mse(Ypred[0], Yn))
-                gaps = warrant_gap_l2_from_views(np.transpose(Ypred, (1, 0, 2)))  # [P,K,V]
+                gaps = warrant_gap_l2_from_views(
+                    np.transpose(Ypred, (1, 0, 2))
+                )  # [P,K,V]
                 agg[m]["mse_view"] += mse_view
                 agg[m]["mse_canon"] += mse_canon
                 agg[m]["gap"] += float(gaps["mean_l2_to_mean"])
@@ -533,9 +573,16 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
         make_break = {
             "gap_reduced_vs_base": bool(agg["sym"]["gap"] < agg["base"]["gap"]),
             "gap_reduced_vs_plain": bool(agg["sym"]["gap"] < agg["plain"]["gap"]),
-            "mse_improved_vs_base": bool(agg["sym"]["mse_view"] < agg["base"]["mse_view"]),
-            "mse_improved_vs_plain": bool(agg["sym"]["mse_view"] < agg["plain"]["mse_view"]),
-            "verdict": bool((agg["sym"]["gap"] < agg["base"]["gap"]) and (agg["sym"]["mse_view"] <= agg["plain"]["mse_view"] * 1.01)),
+            "mse_improved_vs_base": bool(
+                agg["sym"]["mse_view"] < agg["base"]["mse_view"]
+            ),
+            "mse_improved_vs_plain": bool(
+                agg["sym"]["mse_view"] < agg["plain"]["mse_view"]
+            ),
+            "verdict": bool(
+                (agg["sym"]["gap"] < agg["base"]["gap"])
+                and (agg["sym"]["mse_view"] <= agg["plain"]["mse_view"] * 1.01)
+            ),
         }
 
         out: Dict[str, Any] = {
@@ -545,7 +592,8 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
             "lead_hours_requested": int(args.lead_hours),
             "lead_timedelta_selected": str(lead_sel),
             "variables": variables,
-            "symmetry": ["ens_member"] + (["field_codec"] if bool(args.use_codec) else []),
+            "symmetry": ["ens_member"]
+            + (["field_codec"] if bool(args.use_codec) else []),
             "symmetry_cfg": {
                 "ens_member": asdict(
                     EnsembleMemberSymmetryConfig(
@@ -559,7 +607,11 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
             "k_test": int(args.k_test),
             "canonical_member": int(args.canonical_member),
             "train_on_views": bool(args.train_on_views),
-            "splits": {"n_train_times": n_train, "n_val_times": n_val, "n_test_times": n_test},
+            "splits": {
+                "n_train_times": n_train,
+                "n_val_times": n_val,
+                "n_test_times": n_test,
+            },
             "train_rows": int(X_train_sym.shape[0]),
             "val_rows": int(0 if Xn_val_sym is None else Xn_val_sym.shape[0]),
             "metrics": {
@@ -607,11 +659,17 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
 
         # --- Artifacts ---
         out_dir.mkdir(parents=True, exist_ok=True)
-        (out_dir / "results.json").write_text(json.dumps(out, indent=2, sort_keys=True), encoding="utf-8")
+        (out_dir / "results.json").write_text(
+            json.dumps(out, indent=2, sort_keys=True), encoding="utf-8"
+        )
         # Back-compat with older patch scripts.
-        (out_dir / "metrics.json").write_text(json.dumps(out, indent=2, sort_keys=True), encoding="utf-8")
+        (out_dir / "metrics.json").write_text(
+            json.dumps(out, indent=2, sort_keys=True), encoding="utf-8"
+        )
 
-        plot_metrics = {k: out["metrics"][k] for k in ["base", "plain", "sym", "kmean", "teacher"]}
+        plot_metrics = {
+            k: out["metrics"][k] for k in ["base", "plain", "sym", "kmean", "teacher"]
+        }
         _plot_diagnostics(out_dir, metrics=plot_metrics, verdict=make_break)
 
         torch.save(
@@ -650,7 +708,9 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
                 device=device,
                 hero_var=str(args.hero_var),
                 hero_time_index=int(args.hero_time_index),
-                hero_level_hpa=float(args.hero_level_hpa) if args.hero_level_hpa is not None else None,
+                hero_level_hpa=float(args.hero_level_hpa)
+                if args.hero_level_hpa is not None
+                else None,
                 hero_leads=str(args.hero_leads),
                 hero_k=int(args.hero_k),
                 hero_fps=int(args.hero_fps),
@@ -696,14 +756,21 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
 
         level_idx = _choose_level_idx(members, hero_level_hpa)
 
-        t_index = int(mean.sizes["time"] // 2) if int(hero_time_index) < 0 else int(hero_time_index)
+        t_index = (
+            int(mean.sizes["time"] // 2)
+            if int(hero_time_index) < 0
+            else int(hero_time_index)
+        )
         t_index = max(0, min(t_index, int(mean.sizes["time"]) - 1))
 
         leads = [int(x) for x in hero_leads.split(",") if x.strip()]
         if not leads:
             leads = [24]
         deltas = mean["prediction_timedelta"].values
-        lead_idxs = [(h, int(np.argmin(np.abs(deltas - np.timedelta64(int(h), "h"))))) for h in leads]
+        lead_idxs = [
+            (h, int(np.argmin(np.abs(deltas - np.timedelta64(int(h), "h")))))
+            for h in leads
+        ]
 
         def sample_mems(K: int) -> List[int]:
             chosen = [int(canonical_member)]
@@ -728,12 +795,20 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
 
         def load_block_for_lead(lead_idx: int, K: int) -> Tuple[np.ndarray, np.ndarray]:
             mems = sample_mems(K)
-            ds_mean = mean[variables].isel(time=int(t_index), prediction_timedelta=int(lead_idx)).load()
-            ds_mem = members[variables].isel(
-                time=int(t_index),
-                prediction_timedelta=int(lead_idx),
-                realization=mems,
-            ).load()
+            ds_mean = (
+                mean[variables]
+                .isel(time=int(t_index), prediction_timedelta=int(lead_idx))
+                .load()
+            )
+            ds_mem = (
+                members[variables]
+                .isel(
+                    time=int(t_index),
+                    prediction_timedelta=int(lead_idx),
+                    realization=mems,
+                )
+                .load()
+            )
             Y = _stack_mean(ds_mean, variables, level_idx=level_idx)
             Xv = _stack_members(ds_mem, variables, mems=None, level_idx=level_idx)
             return Xv, Y
@@ -749,16 +824,24 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
             if codec_sym is not None:
                 Xn2 = Xn.copy()
                 for j in range(int(Xn2.shape[0])):
-                    Xn2[j] = codec_sym.sample(Xn2[j], seed=_seed32(seed, "hero_codec", t_index, h, j))
+                    Xn2[j] = codec_sym.sample(
+                        Xn2[j], seed=_seed32(seed, "hero_codec", t_index, h, j)
+                    )
                 Xn = Xn2
 
             K, P, V = Xn.shape
 
             Yb = Xn  # base: raw member
-            Yp = predict_regression(plain_head, Xn.reshape(K * P, V), device=device).reshape(K, P, V)
-            Ys = predict_regression(sym_head, Xn.reshape(K * P, V), device=device).reshape(K, P, V)
+            Yp = predict_regression(
+                plain_head, Xn.reshape(K * P, V), device=device
+            ).reshape(K, P, V)
+            Ys = predict_regression(
+                sym_head, Xn.reshape(K * P, V), device=device
+            ).reshape(K, P, V)
 
-            if "longitude" in getattr(mean, "coords", {}) and "latitude" in getattr(mean, "coords", {}):
+            if "longitude" in getattr(mean, "coords", {}) and "latitude" in getattr(
+                mean, "coords", {}
+            ):
                 W = int(mean.sizes.get("longitude", 1))
                 H = int(mean.sizes.get("latitude", 1))
             else:
@@ -816,15 +899,29 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
             put(fig.add_subplot(gs[1, 2]), eS, f"|Sym-Teacher|\nMSE={mseS:.3g}")
             ax = fig.add_subplot(gs[1, 3])
             ax.axis("off")
-            ax.text(0, 0.95, f"t={t_index}\nlead={h}h\nK={K} views\ncodec={'on' if codec_sym is not None else 'off'}", va="top", fontsize=12)
-            ax.text(0, 0.55, f"Gap(mean std across views)\nBase:  {gapB:.3g}\nPlain: {gapP:.3g}\nSym:   {gapS:.3g}", va="top", fontsize=12)
+            ax.text(
+                0,
+                0.95,
+                f"t={t_index}\nlead={h}h\nK={K} views\ncodec={'on' if codec_sym is not None else 'off'}",
+                va="top",
+                fontsize=12,
+            )
+            ax.text(
+                0,
+                0.55,
+                f"Gap(mean std across views)\nBase:  {gapB:.3g}\nPlain: {gapP:.3g}\nSym:   {gapS:.3g}",
+                va="top",
+                fontsize=12,
+            )
 
             put(fig.add_subplot(gs[2, 0]), gB, f"Gap map (Base)\nmean std={gapB:.3g}")
             put(fig.add_subplot(gs[2, 1]), gP, f"Gap map (Plain)\nmean std={gapP:.3g}")
             put(fig.add_subplot(gs[2, 2]), gS, f"Gap map (Sym)\nmean std={gapS:.3g}")
             fig.add_subplot(gs[2, 3]).axis("off")
 
-            fig.suptitle("Mezzanine symmetry distillation closes the warrant gap", fontsize=16)
+            fig.suptitle(
+                "Mezzanine symmetry distillation closes the warrant gap", fontsize=16
+            )
             fig.tight_layout()
 
             frame_path = out_dir / f"hero_lead_{int(h):03d}h.png"
@@ -835,7 +932,13 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
         if frames:
             gif_path = out_dir / "hero.gif"
             duration_ms = int(1000 / max(1, int(hero_fps)))
-            frames[0].save(gif_path, save_all=True, append_images=frames[1:], duration=duration_ms, loop=0)
+            frames[0].save(
+                gif_path,
+                save_all=True,
+                append_images=frames[1:],
+                duration=duration_ms,
+                loop=0,
+            )
             print("[hero] wrote:", gif_path)
 
         if lead_rows:
@@ -848,19 +951,57 @@ class NeuralGCMEnsWarrantDistillRecipe(Recipe):
 
             leads2 = [r["lead_h"] for r in lead_rows]
             for key, outp, title in [
-                ("mse", out_dir / "hero_mse_vs_lead.png", "MSE vs Teacher (hero var-level)"),
-                ("gap", out_dir / "hero_gap_vs_lead.png", "Warrant gap proxy (mean std across views)"),
+                (
+                    "mse",
+                    out_dir / "hero_mse_vs_lead.png",
+                    "MSE vs Teacher (hero var-level)",
+                ),
+                (
+                    "gap",
+                    out_dir / "hero_gap_vs_lead.png",
+                    "Warrant gap proxy (mean std across views)",
+                ),
             ]:
                 fig = plt.figure(figsize=(8, 4))
                 if key == "mse":
-                    plt.plot(leads2, [r["mse_base"] for r in lead_rows], marker="o", label="base")
-                    plt.plot(leads2, [r["mse_plain"] for r in lead_rows], marker="o", label="plain")
-                    plt.plot(leads2, [r["mse_sym"] for r in lead_rows], marker="o", label="sym")
+                    plt.plot(
+                        leads2,
+                        [r["mse_base"] for r in lead_rows],
+                        marker="o",
+                        label="base",
+                    )
+                    plt.plot(
+                        leads2,
+                        [r["mse_plain"] for r in lead_rows],
+                        marker="o",
+                        label="plain",
+                    )
+                    plt.plot(
+                        leads2,
+                        [r["mse_sym"] for r in lead_rows],
+                        marker="o",
+                        label="sym",
+                    )
                     plt.ylabel("mse")
                 else:
-                    plt.plot(leads2, [r["gap_base"] for r in lead_rows], marker="o", label="base")
-                    plt.plot(leads2, [r["gap_plain"] for r in lead_rows], marker="o", label="plain")
-                    plt.plot(leads2, [r["gap_sym"] for r in lead_rows], marker="o", label="sym")
+                    plt.plot(
+                        leads2,
+                        [r["gap_base"] for r in lead_rows],
+                        marker="o",
+                        label="base",
+                    )
+                    plt.plot(
+                        leads2,
+                        [r["gap_plain"] for r in lead_rows],
+                        marker="o",
+                        label="plain",
+                    )
+                    plt.plot(
+                        leads2,
+                        [r["gap_sym"] for r in lead_rows],
+                        marker="o",
+                        label="sym",
+                    )
                     plt.ylabel("gap")
                 plt.xlabel("Lead (hours)")
                 plt.title(title)

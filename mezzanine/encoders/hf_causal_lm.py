@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Sequence
+from typing import Any, List, Sequence
 
 import numpy as np
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizerBase
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizerBase,
+)
 
 from ..core.cache import hash_dict
+from ..registry import ENCODERS
 from .base import Encoder
 
 
@@ -26,6 +32,7 @@ class HFCausalLMEncoderConfig:
           * "mean": mean over non-pad tokens
           * "mean_std": concat(mean, std) over non-pad tokens
     """
+
     model_name: str = "gpt2"
     batch_size: int = 8
     fp16: bool = True
@@ -80,6 +87,7 @@ class HFCausalLMEncoder(Encoder):
         out_chunks: List[np.ndarray] = []
 
         from tqdm import tqdm
+
         it = range(0, len(texts), bs)
         for i in tqdm(it, desc="encode batches", disable=not self.cfg.progress):
             batch = texts[i : i + bs]
@@ -94,15 +102,24 @@ class HFCausalLMEncoder(Encoder):
             input_ids = enc["input_ids"]
             attn = enc["attention_mask"]  # [B,T]
 
-            with torch.amp.autocast("cuda", enabled=(self.cfg.fp16 and device.startswith("cuda"))):
-                out = self.model(input_ids=input_ids, attention_mask=attn, output_hidden_states=True, use_cache=False)
+            with torch.amp.autocast(
+                "cuda", enabled=(self.cfg.fp16 and device.startswith("cuda"))
+            ):
+                out = self.model(
+                    input_ids=input_ids,
+                    attention_mask=attn,
+                    output_hidden_states=True,
+                    use_cache=False,
+                )
 
             hs = out.hidden_states  # tuple(L+1) of [B,T,H]
             layer = int(self.cfg.layer)
             if layer < 0:
                 layer = len(hs) + layer
             if layer < 0 or layer >= len(hs):
-                raise ValueError(f"layer={self.cfg.layer} out of range for len(hidden_states)={len(hs)}")
+                raise ValueError(
+                    f"layer={self.cfg.layer} out of range for len(hidden_states)={len(hs)}"
+                )
 
             H = hs[layer]  # [B,T,H]
             # build pooled embedding
@@ -129,5 +146,4 @@ class HFCausalLMEncoder(Encoder):
 
 
 # Register
-from ..registry import ENCODERS
 ENCODERS.register("hf_causal_lm")(HFCausalLMEncoder)

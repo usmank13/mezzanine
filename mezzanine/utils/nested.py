@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """Small helpers for nested dict-like structures.
 
 HuggingFace Datasets and RL/robotics stacks often return nested dicts
 (e.g. observation.images.cam_high). Recipes should be able to access these
 without hard-coding the nesting.
 """
+
+from __future__ import annotations
 
 from typing import Any, Mapping
 

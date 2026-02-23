@@ -1,1 +1,1 @@
-"""Templates for Mezzanine plugins (adapters / symmetries / encoders / recipes).""" 
+"""Templates for Mezzanine plugins (adapters / symmetries / encoders / recipes)."""

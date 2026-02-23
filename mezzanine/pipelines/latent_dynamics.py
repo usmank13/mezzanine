@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import numpy as np
 import torch
@@ -81,7 +81,9 @@ def train_latent_dynamics(
             it = iter(dl)
             bt, btp, ba = next(it)
 
-        bt = bt.to(device); btp = btp.to(device); ba = ba.to(device)
+        bt = bt.to(device)
+        btp = btp.to(device)
+        ba = ba.to(device)
 
         pa = m_a(torch.cat([bt, ba], dim=-1))
         la = cos_loss(pa, btp)
@@ -107,9 +109,9 @@ def eval_latent_dynamics(
     seed: int = 0,
 ) -> Dict[str, Any]:
     """Evaluate with:
-      - cosine similarity to true future latent
-      - retrieval ranks (mean rank, median rank, R@1, R@10)
-      - action shuffle counterfactual
+    - cosine similarity to true future latent
+    - retrieval ranks (mean rank, median rank, R@1, R@10)
+    - action shuffle counterfactual
     """
     rng = np.random.default_rng(seed)
 
@@ -120,10 +122,32 @@ def eval_latent_dynamics(
     at = torch.tensor(a_feat, dtype=torch.float32, device=device)
 
     with torch.no_grad():
-        zn = torch.nn.functional.normalize(models["model_noact"](bt), dim=-1).detach().cpu().float().numpy()
-        za = torch.nn.functional.normalize(models["model_action"](torch.cat([bt, at], dim=-1)), dim=-1).detach().cpu().float().numpy()
+        zn = (
+            torch.nn.functional.normalize(models["model_noact"](bt), dim=-1)
+            .detach()
+            .cpu()
+            .float()
+            .numpy()
+        )
+        za = (
+            torch.nn.functional.normalize(
+                models["model_action"](torch.cat([bt, at], dim=-1)), dim=-1
+            )
+            .detach()
+            .cpu()
+            .float()
+            .numpy()
+        )
         perm = rng.permutation(len(a_feat))
-        zas = torch.nn.functional.normalize(models["model_action"](torch.cat([bt, at[perm]], dim=-1)), dim=-1).detach().cpu().float().numpy()
+        zas = (
+            torch.nn.functional.normalize(
+                models["model_action"](torch.cat([bt, at[perm]], dim=-1)), dim=-1
+            )
+            .detach()
+            .cpu()
+            .float()
+            .numpy()
+        )
 
     def mean_cos(pred):
         return float(np.mean(np.sum(pred * z_true, axis=1)))
@@ -141,7 +165,8 @@ def eval_latent_dynamics(
     r_a = ranks(za)
     r_s = ranks(zas)
 
-    def r_at_k(r, k): return float(np.mean(r <= k))
+    def r_at_k(r, k):
+        return float(np.mean(r <= k))
 
     metrics = {
         "cos": {
@@ -181,25 +206,37 @@ def eval_latent_dynamics(
     deltas = {
         "action_minus_no_action": {
             "cos": metrics["cos"]["action"] - metrics["cos"]["no_action"],
-            "mean_rank_gain": metrics["rank"]["mean"]["no_action"] - metrics["rank"]["mean"]["action"],
-            "r10_gain": metrics["rank"]["r@10"]["action"] - metrics["rank"]["r@10"]["no_action"],
+            "mean_rank_gain": metrics["rank"]["mean"]["no_action"]
+            - metrics["rank"]["mean"]["action"],
+            "r10_gain": metrics["rank"]["r@10"]["action"]
+            - metrics["rank"]["r@10"]["no_action"],
         },
         "action_minus_action_shuf": {
             "cos": metrics["cos"]["action"] - metrics["cos"]["action_shuf"],
-            "mean_rank_gain": metrics["rank"]["mean"]["action_shuf"] - metrics["rank"]["mean"]["action"],
-            "r10_gain": metrics["rank"]["r@10"]["action"] - metrics["rank"]["r@10"]["action_shuf"],
+            "mean_rank_gain": metrics["rank"]["mean"]["action_shuf"]
+            - metrics["rank"]["mean"]["action"],
+            "r10_gain": metrics["rank"]["r@10"]["action"]
+            - metrics["rank"]["r@10"]["action_shuf"],
         },
         "action_minus_persist": {
             "cos": metrics["cos"]["action"] - metrics["cos"]["persist"],
-            "mean_rank_gain": metrics["rank"]["mean"]["persist"] - metrics["rank"]["mean"]["action"],
-            "r10_gain": metrics["rank"]["r@10"]["action"] - metrics["rank"]["r@10"]["persist"],
+            "mean_rank_gain": metrics["rank"]["mean"]["persist"]
+            - metrics["rank"]["mean"]["action"],
+            "r10_gain": metrics["rank"]["r@10"]["action"]
+            - metrics["rank"]["r@10"]["persist"],
         },
     }
 
     # Make/break criteria (rank-based)
-    action_helps = (deltas["action_minus_no_action"]["mean_rank_gain"] >= 5.0) or (deltas["action_minus_no_action"]["r10_gain"] >= 0.05)
-    shuffle_hurts = (deltas["action_minus_action_shuf"]["mean_rank_gain"] >= 5.0) or (deltas["action_minus_action_shuf"]["r10_gain"] >= 0.05)
-    verdict = "MAKE ✅" if (action_helps and shuffle_hurts) else "BREAK / INCONCLUSIVE ❌"
+    action_helps = (deltas["action_minus_no_action"]["mean_rank_gain"] >= 5.0) or (
+        deltas["action_minus_no_action"]["r10_gain"] >= 0.05
+    )
+    shuffle_hurts = (deltas["action_minus_action_shuf"]["mean_rank_gain"] >= 5.0) or (
+        deltas["action_minus_action_shuf"]["r10_gain"] >= 0.05
+    )
+    verdict = (
+        "MAKE ✅" if (action_helps and shuffle_hurts) else "BREAK / INCONCLUSIVE ❌"
+    )
 
     return {
         "metrics": metrics,
@@ -210,5 +247,5 @@ def eval_latent_dynamics(
                 "action-shuffle hurts (mean-rank gain ≥5 OR R@10 gain ≥0.05)": shuffle_hurts,
             },
             "verdict": verdict,
-        }
+        },
     }

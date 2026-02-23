@@ -166,12 +166,14 @@ def train_soft_label_head(
 
 
 @torch.no_grad()
-def predict_proba(head: MLPHead, Z: np.ndarray, *, device: str = "cuda", batch_size: int = 512) -> np.ndarray:
+def predict_proba(
+    head: MLPHead, Z: np.ndarray, *, device: str = "cuda", batch_size: int = 512
+) -> np.ndarray:
     head.eval()
     Zt = torch.from_numpy(Z).to(device=device, dtype=torch.float32)
     out = []
     for i in range(0, Zt.shape[0], batch_size):
-        logits = head(Zt[i:i+batch_size])
+        logits = head(Zt[i : i + batch_size])
         p = torch.softmax(logits, dim=-1)
         out.append(p.detach().cpu().float().numpy())
     return np.concatenate(out, axis=0).astype(np.float32)
@@ -198,7 +200,9 @@ def warrant_gap_from_views(P_views: np.ndarray) -> Dict[str, float]:
     """
     N, K, C = P_views.shape
     P_bar = P_views.mean(axis=1, keepdims=True)  # [N,1,C]
-    tv_to_mean = tv_distance(P_views.reshape(N*K, C), np.repeat(P_bar, K, axis=1).reshape(N*K, C))
+    tv_to_mean = tv_distance(
+        P_views.reshape(N * K, C), np.repeat(P_bar, K, axis=1).reshape(N * K, C)
+    )
     mean_tv_to_mean = float(tv_to_mean.mean())
 
     # pairwise: pick two views per example deterministically (0,1) if possible else 0,0

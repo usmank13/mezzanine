@@ -61,10 +61,26 @@ def build_views(
     return views
 
 
-def _cached_encode(*, cache, world_fp: str, enc_fp: str, split: str, tag: str, extra: Dict[str, Any], encoder, batch: List[Any]) -> np.ndarray:
+def _cached_encode(
+    *,
+    cache,
+    world_fp: str,
+    enc_fp: str,
+    split: str,
+    tag: str,
+    extra: Dict[str, Any],
+    encoder,
+    batch: List[Any],
+) -> np.ndarray:
     if cache is None:
         return encoder.encode(batch)
-    key = cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split=split, tag=tag, extra=extra)
+    key = cache.make_key(
+        world_fingerprint=world_fp,
+        encoder_fingerprint=enc_fp,
+        split=split,
+        tag=tag,
+        extra=extra,
+    )
     got = cache.get(key)
     if got is not None:
         arr, _meta = got
@@ -86,13 +102,35 @@ class QGJetsDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Dataset
-        p.add_argument("--num_data", type=int, default=50000, help="Number of jets to load from EnergyFlow cache.")
-        p.add_argument("--generator", type=str, default="pythia", choices=["pythia", "herwig"])
-        p.add_argument("--with_bc", action="store_true", help="Include b/c quark jets (different dataset).")
-        p.add_argument("--ef_cache_dir", type=str, default="~/.energyflow", help="EnergyFlow dataset cache directory.")
+        p.add_argument(
+            "--num_data",
+            type=int,
+            default=50000,
+            help="Number of jets to load from EnergyFlow cache.",
+        )
+        p.add_argument(
+            "--generator", type=str, default="pythia", choices=["pythia", "herwig"]
+        )
+        p.add_argument(
+            "--with_bc",
+            action="store_true",
+            help="Include b/c quark jets (different dataset).",
+        )
+        p.add_argument(
+            "--ef_cache_dir",
+            type=str,
+            default="~/.energyflow",
+            help="EnergyFlow dataset cache directory.",
+        )
         p.add_argument("--n_train", type=int, default=20000)
         p.add_argument("--n_test", type=int, default=5000)
-        p.add_argument("--label_field", type=str, default="label", choices=["label"], help="Kept for schema-compatibility.")
+        p.add_argument(
+            "--label_field",
+            type=str,
+            default="label",
+            choices=["label"],
+            help="Kept for schema-compatibility.",
+        )
 
         # Symmetries / views
         p.add_argument("--k_train", type=int, default=8)
@@ -100,13 +138,25 @@ class QGJetsDistillRecipe(Recipe):
         p.add_argument("--no_perm", action="store_true")
         p.add_argument("--no_rotate", action="store_true")
         p.add_argument("--no_reflect", action="store_true")
-        p.add_argument("--theta_max", type=float, default=float(2 * np.pi), help="Rotation range: θ ~ U(-theta_max, theta_max)")
+        p.add_argument(
+            "--theta_max",
+            type=float,
+            default=float(2 * np.pi),
+            help="Rotation range: θ ~ U(-theta_max, theta_max)",
+        )
         p.add_argument("--noise_y", type=float, default=0.0)
         p.add_argument("--noise_phi", type=float, default=0.0)
-        p.add_argument("--noise_pt", type=float, default=0.0, help="Multiplicative pt noise sigma")
+        p.add_argument(
+            "--noise_pt", type=float, default=0.0, help="Multiplicative pt noise sigma"
+        )
 
         # Encoder
-        p.add_argument("--encoder", type=str, default="qg_flatten", choices=["qg_flatten", "qg_eec2"])
+        p.add_argument(
+            "--encoder",
+            type=str,
+            default="qg_flatten",
+            choices=["qg_flatten", "qg_eec2"],
+        )
         p.add_argument("--max_particles", type=int, default=64)
         p.add_argument("--no_pid", action="store_true")
         p.add_argument("--pid_scale", type=float, default=0.01)
@@ -127,7 +177,11 @@ class QGJetsDistillRecipe(Recipe):
         p.add_argument("--hard_label_weight", type=float, default=0.1)
 
         # Demo gif
-        p.add_argument("--make_gif", action="store_true", help="Write a jet symmetry GIF to the run directory.")
+        p.add_argument(
+            "--make_gif",
+            action="store_true",
+            help="Write a jet symmetry GIF to the run directory.",
+        )
         p.add_argument("--gif_bins", type=int, default=160)
         p.add_argument("--gif_extent", type=float, default=0.8)
         p.add_argument("--gif_ms", type=int, default=90)
@@ -187,10 +241,16 @@ class QGJetsDistillRecipe(Recipe):
         if not bool(args.no_perm):
             symmetries.append(QGPermutationSymmetry())
         if not bool(args.no_rotate):
-            symmetries.append(QGSO2RotateSymmetry(QGSO2RotateConfig(theta_max=float(args.theta_max))))
+            symmetries.append(
+                QGSO2RotateSymmetry(QGSO2RotateConfig(theta_max=float(args.theta_max)))
+            )
         if not bool(args.no_reflect):
             symmetries.append(QGReflectionSymmetry())
-        if float(args.noise_y) > 0 or float(args.noise_phi) > 0 or float(args.noise_pt) > 0:
+        if (
+            float(args.noise_y) > 0
+            or float(args.noise_phi) > 0
+            or float(args.noise_pt) > 0
+        ):
             symmetries.append(
                 QGCoordNoiseSymmetry(
                     QGCoordNoiseConfig(
@@ -258,7 +318,9 @@ class QGJetsDistillRecipe(Recipe):
         base_acc = accuracy(P_base_test_canon, y_test)
 
         # Test views for warrant gap
-        test_views = build_views(test, symmetries=symmetries, seed=int(args.seed) + 123, K=int(args.k_test))
+        test_views = build_views(
+            test, symmetries=symmetries, seed=int(args.seed) + 123, K=int(args.k_test)
+        )
         Z_test_views: List[np.ndarray] = [Z_test]
         for j in range(1, int(args.k_test)):
             Zj = _cached_encode(
@@ -267,16 +329,26 @@ class QGJetsDistillRecipe(Recipe):
                 enc_fp=enc_fp,
                 split="test",
                 tag=f"view_{j}",
-                extra={"k": int(args.k_test), "j": j, "symmetries": [getattr(sym, "NAME", str(sym)) for sym in symmetries]},
+                extra={
+                    "k": int(args.k_test),
+                    "j": j,
+                    "symmetries": [
+                        getattr(sym, "NAME", str(sym)) for sym in symmetries
+                    ],
+                },
                 encoder=encoder,
                 batch=test_views[j],
             )
             Z_test_views.append(Zj)
-        P_views_base = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1)
+        P_views_base = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )
         gap_base = warrant_gap_from_views(P_views_base)
 
         # Teacher expectation on train views
-        train_views = build_views(train, symmetries=symmetries, seed=int(args.seed) + 999, K=int(args.k_train))
+        train_views = build_views(
+            train, symmetries=symmetries, seed=int(args.seed) + 999, K=int(args.k_train)
+        )
         Z_train_views: List[np.ndarray] = [Z_train]
         for j in range(1, int(args.k_train)):
             Zj = _cached_encode(
@@ -285,12 +357,21 @@ class QGJetsDistillRecipe(Recipe):
                 enc_fp=enc_fp,
                 split="train",
                 tag=f"view_{j}",
-                extra={"k": int(args.k_train), "j": j, "symmetries": [getattr(sym, "NAME", str(sym)) for sym in symmetries]},
+                extra={
+                    "k": int(args.k_train),
+                    "j": j,
+                    "symmetries": [
+                        getattr(sym, "NAME", str(sym)) for sym in symmetries
+                    ],
+                },
                 encoder=encoder,
                 batch=train_views[j],
             )
             Z_train_views.append(Zj)
-        P_train_views = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_train_views], axis=1)
+        P_train_views = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_train_views],
+            axis=1,
+        )
         P_teacher = P_train_views.mean(axis=1)
 
         # Student
@@ -312,7 +393,9 @@ class QGJetsDistillRecipe(Recipe):
         P_stud_test_canon = predict_proba(stud_head, Z_test, device=device)
         stud_acc = accuracy(P_stud_test_canon, y_test)
 
-        P_views_stud = np.stack([predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1)
+        P_views_stud = np.stack(
+            [predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )
         gap_stud = warrant_gap_from_views(P_views_stud)
 
         base_gap = float(gap_base["mean_tv_to_mean"])
@@ -332,7 +415,11 @@ class QGJetsDistillRecipe(Recipe):
         else:
             rel = max(tv_rel_improve, pw_rel_improve)
             criterion = "max(tv_rel_improve,pw_rel_improve)>=0.2 and acc_drop<=0.05"
-            verdict = "MAKE ✅" if (rel >= 0.2 and acc_drop <= 0.05) else "BREAK / INCONCLUSIVE ❌"
+            verdict = (
+                "MAKE ✅"
+                if (rel >= 0.2 and acc_drop <= 0.05)
+                else "BREAK / INCONCLUSIVE ❌"
+            )
 
         # Persist probabilities for downstream visualisation (small)
         np.savez_compressed(
@@ -348,12 +435,16 @@ class QGJetsDistillRecipe(Recipe):
         if bool(args.make_gif):
             # pick example with largest baseline pairwise TV between view0 and view1
             if P_views_base.shape[1] >= 2:
-                tv01 = 0.5 * np.abs(P_views_base[:, 0, :] - P_views_base[:, 1, :]).sum(axis=-1)
+                tv01 = 0.5 * np.abs(P_views_base[:, 0, :] - P_views_base[:, 1, :]).sum(
+                    axis=-1
+                )
             else:
                 tv01 = np.zeros((P_views_base.shape[0],), dtype=np.float32)
             i0 = int(np.argmax(tv01))
 
-            parts_views = [test_views[j][i0]["particles"] for j in range(len(test_views))]
+            parts_views = [
+                test_views[j][i0]["particles"] for j in range(len(test_views))
+            ]
             pb = P_views_base[i0]
             ps = P_views_stud[i0]
             lab = int(y_test[i0])
@@ -365,7 +456,12 @@ class QGJetsDistillRecipe(Recipe):
                 p_student_views=ps,
                 label=lab,
                 out_path=gif_path,
-                cfg=JetGifConfig(extent=float(args.gif_extent), bins=int(args.gif_bins), duration_ms=int(args.gif_ms), loop=0),
+                cfg=JetGifConfig(
+                    extent=float(args.gif_extent),
+                    bins=int(args.gif_bins),
+                    duration_ms=int(args.gif_ms),
+                    loop=0,
+                ),
             )
 
             demo = {
@@ -392,7 +488,11 @@ class QGJetsDistillRecipe(Recipe):
                 "k_test": int(args.k_test),
                 "active": [getattr(sym, "NAME", str(sym)) for sym in symmetries],
                 "theta_max": float(args.theta_max),
-                "noise": {"y": float(args.noise_y), "phi": float(args.noise_phi), "pt": float(args.noise_pt)},
+                "noise": {
+                    "y": float(args.noise_y),
+                    "phi": float(args.noise_phi),
+                    "pt": float(args.noise_pt),
+                },
             },
             "baseline": {
                 "acc": base_acc,

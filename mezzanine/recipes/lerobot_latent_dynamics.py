@@ -41,15 +41,26 @@ class LeRobotLatentDynamicsRecipe(Recipe):
         p.add_argument("--action_key", type=str, default="action")
         p.add_argument("--n_train", type=int, default=4000)
         p.add_argument("--n_test", type=int, default=2000)
-        p.add_argument("--delta_steps", type=int, default=1, help="Step offset Δ between (t, t+Δ).")
-        p.add_argument("--per_episode_samples", type=int, default=1,
-                       help="If the dataset is episode-format, sample this many pairs per episode row.")
+        p.add_argument(
+            "--delta_steps", type=int, default=1, help="Step offset Δ between (t, t+Δ)."
+        )
+        p.add_argument(
+            "--per_episode_samples",
+            type=int,
+            default=1,
+            help="If the dataset is episode-format, sample this many pairs per episode row.",
+        )
 
         # Encoder
         p.add_argument("--ijepa_model", type=str, default="facebook/ijepa_vith14_1k")
         p.add_argument("--encode_bs", type=int, default=32)
         p.add_argument("--no_fp16", action="store_true")
-        p.add_argument("--embed_mode", type=str, default="mean_std", choices=["cls", "mean", "mean_std"])
+        p.add_argument(
+            "--embed_mode",
+            type=str,
+            default="mean_std",
+            choices=["cls", "mean", "mean_std"],
+        )
         p.add_argument("--embed_layer", type=int, default=-4)
 
         # Training
@@ -60,21 +71,31 @@ class LeRobotLatentDynamicsRecipe(Recipe):
         p.add_argument("--depth", type=int, default=2)
 
         # Planning (downstream use)
-        p.add_argument("--do_planning", action="store_true",
-                       help="Run lightweight goal-conditioned action retrieval evaluation.")
+        p.add_argument(
+            "--do_planning",
+            action="store_true",
+            help="Run lightweight goal-conditioned action retrieval evaluation.",
+        )
         p.add_argument("--plan_candidates", type=int, default=32)
         p.add_argument("--plan_eval", type=int, default=512)
 
         # V-JEPA-style 1-step CEM planning (offline proxy)
-        p.add_argument("--do_cem", action="store_true",
-                       help="Run V-JEPA-style CEM planning objective for 1-step goals (offline proxy).")
+        p.add_argument(
+            "--do_cem",
+            action="store_true",
+            help="Run V-JEPA-style CEM planning objective for 1-step goals (offline proxy).",
+        )
         p.add_argument("--cem_eval", type=int, default=128)
         p.add_argument("--cem_samples", type=int, default=256)
         p.add_argument("--cem_elite", type=int, default=16)
         p.add_argument("--cem_iters", type=int, default=4)
         p.add_argument("--cem_sigma", type=float, default=1.0)
-        p.add_argument("--cem_l1_bound", type=float, default=None,
-                       help="Optional L1-ball bound for actions. If omitted, uses a quantile of train action L1 norms.")
+        p.add_argument(
+            "--cem_l1_bound",
+            type=float,
+            default=None,
+            help="Optional L1-ball bound for actions. If omitted, uses a quantile of train action L1 norms.",
+        )
         p.add_argument("--cem_l1_quantile", type=float, default=0.95)
 
         # Output
@@ -159,11 +180,15 @@ class LeRobotLatentDynamicsRecipe(Recipe):
 
         imgs_train_t = [ex["img_t"] for ex in train_pairs]
         imgs_train_tp = [ex["img_tp"] for ex in train_pairs]
-        a_train = np.stack([ex["action_feat"] for ex in train_pairs], axis=0).astype(np.float32)
+        a_train = np.stack([ex["action_feat"] for ex in train_pairs], axis=0).astype(
+            np.float32
+        )
 
         imgs_test_t = [ex["img_t"] for ex in test_pairs]
         imgs_test_tp = [ex["img_tp"] for ex in test_pairs]
-        a_test = np.stack([ex["action_feat"] for ex in test_pairs], axis=0).astype(np.float32)
+        a_test = np.stack([ex["action_feat"] for ex in test_pairs], axis=0).astype(
+            np.float32
+        )
 
         # --- Encoder ---
         enc_cfg = HFVisionEncoderConfig(
@@ -188,22 +213,46 @@ class LeRobotLatentDynamicsRecipe(Recipe):
 
         if ctx.cache is not None:
             z_train_t = ctx.cache.get_or_compute(
-                ctx.cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split="train", tag="z_t", extra=extra_common),
+                ctx.cache.make_key(
+                    world_fingerprint=world_fp,
+                    encoder_fingerprint=enc_fp,
+                    split="train",
+                    tag="z_t",
+                    extra=extra_common,
+                ),
                 lambda: enc.encode(imgs_train_t),
                 meta={"n": len(imgs_train_t), "world_fp": world_fp, "enc_fp": enc_fp},
             )
             z_train_tp = ctx.cache.get_or_compute(
-                ctx.cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split="train", tag="z_tp", extra=extra_common),
+                ctx.cache.make_key(
+                    world_fingerprint=world_fp,
+                    encoder_fingerprint=enc_fp,
+                    split="train",
+                    tag="z_tp",
+                    extra=extra_common,
+                ),
                 lambda: enc.encode(imgs_train_tp),
                 meta={"n": len(imgs_train_tp), "world_fp": world_fp, "enc_fp": enc_fp},
             )
             z_test_t = ctx.cache.get_or_compute(
-                ctx.cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split="test", tag="z_t", extra=extra_common),
+                ctx.cache.make_key(
+                    world_fingerprint=world_fp,
+                    encoder_fingerprint=enc_fp,
+                    split="test",
+                    tag="z_t",
+                    extra=extra_common,
+                ),
                 lambda: enc.encode(imgs_test_t),
                 meta={"n": len(imgs_test_t), "world_fp": world_fp, "enc_fp": enc_fp},
             )
             z_test_tp = ctx.cache.get_or_compute(
-                ctx.cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split="test", tag="z_tp", extra=extra_common),
+                ctx.cache.make_key(
+                    world_fingerprint=world_fp,
+                    encoder_fingerprint=enc_fp,
+                    split="test",
+                    tag="z_tp",
+                    extra=extra_common,
+                ),
                 lambda: enc.encode(imgs_test_tp),
                 meta={"n": len(imgs_test_tp), "world_fp": world_fp, "enc_fp": enc_fp},
             )
@@ -222,8 +271,12 @@ class LeRobotLatentDynamicsRecipe(Recipe):
             depth=int(args.depth),
             seed=int(args.seed),
         )
-        train_out = train_latent_dynamics(z_train_t, z_train_tp, a_train, cfg, device=device)
-        ev = eval_latent_dynamics(train_out, z_test_t, z_test_tp, a_test, device=device, seed=int(args.seed))
+        train_out = train_latent_dynamics(
+            z_train_t, z_train_tp, a_train, cfg, device=device
+        )
+        ev = eval_latent_dynamics(
+            train_out, z_test_t, z_test_tp, a_test, device=device, seed=int(args.seed)
+        )
 
         # --- Downstream: goal-conditioned action retrieval planning ---
         planning: Dict[str, Any] = {}
@@ -265,10 +318,18 @@ class LeRobotLatentDynamicsRecipe(Recipe):
 
                 # Ground-truth energy under the learned predictor
                 with torch.no_grad():
-                    z0_t = torch.tensor(z0.reshape(1, -1), dtype=torch.float32, device=device)
-                    a_gt_t = torch.tensor(a_gt.reshape(1, -1), dtype=torch.float32, device=device)
-                    pred_gt = torch.nn.functional.normalize(m_a(torch.cat([z0_t, a_gt_t], dim=-1)), dim=-1)
-                    zg_t = torch.tensor(zg.reshape(1, -1), dtype=torch.float32, device=device)
+                    z0_t = torch.tensor(
+                        z0.reshape(1, -1), dtype=torch.float32, device=device
+                    )
+                    a_gt_t = torch.tensor(
+                        a_gt.reshape(1, -1), dtype=torch.float32, device=device
+                    )
+                    pred_gt = torch.nn.functional.normalize(
+                        m_a(torch.cat([z0_t, a_gt_t], dim=-1)), dim=-1
+                    )
+                    zg_t = torch.tensor(
+                        zg.reshape(1, -1), dtype=torch.float32, device=device
+                    )
                     e_gt = torch.mean(torch.abs(pred_gt - zg_t)).item()
                 energies_gt.append(float(e_gt))
 
@@ -276,8 +337,12 @@ class LeRobotLatentDynamicsRecipe(Recipe):
                 j = int(rng.integers(0, len(a_train)))
                 a_r = a_train[j]
                 with torch.no_grad():
-                    a_r_t = torch.tensor(a_r.reshape(1, -1), dtype=torch.float32, device=device)
-                    pred_r = torch.nn.functional.normalize(m_a(torch.cat([z0_t, a_r_t], dim=-1)), dim=-1)
+                    a_r_t = torch.tensor(
+                        a_r.reshape(1, -1), dtype=torch.float32, device=device
+                    )
+                    pred_r = torch.nn.functional.normalize(
+                        m_a(torch.cat([z0_t, a_r_t], dim=-1)), dim=-1
+                    )
                     e_r = torch.mean(torch.abs(pred_r - zg_t)).item()
                 energies_rand.append(float(e_r))
 
@@ -340,7 +405,11 @@ class LeRobotLatentDynamicsRecipe(Recipe):
                     "resolved_keys": key_meta,
                 },
             },
-            "encoder": {"name": "hf_vision", "fingerprint": enc_fp, "config": enc_cfg.__dict__},
+            "encoder": {
+                "name": "hf_vision",
+                "fingerprint": enc_fp,
+                "config": enc_cfg.__dict__,
+            },
             "metrics": ev["metrics"],
             "deltas": ev["deltas"],
             # IMPORTANT: keep make/break identical to other latent-dynamics experiments.
@@ -362,7 +431,9 @@ class LeRobotLatentDynamicsRecipe(Recipe):
             _flatten("deltas/", result["deltas"], flat)
             _flatten("planning/", result.get("planning", {}), flat)
             ctx.logger.log_metrics(flat)
-            ctx.logger.log_text("make_break/verdict", str(result["make_break"].get("verdict", "")))
+            ctx.logger.log_text(
+                "make_break/verdict", str(result["make_break"].get("verdict", ""))
+            )
             ctx.logger.log_artifact(out_dir / "results.json", name="results.json")
             ctx.logger.log_artifact(out_dir / "diagnostics.png", name="diagnostics.png")
             ctx.logger.log_artifact(out_dir / "montage.png", name="montage.png")

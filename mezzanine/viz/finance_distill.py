@@ -30,4 +30,3 @@ def plot_finance_bar_offset_distill(summary: Dict[str, Any], out_path: Path) -> 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=200)
     plt.close(fig)
-

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Sequence, TypeVar
+from typing import Sequence, TypeVar
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
 
 T = TypeVar("T")
@@ -17,7 +18,9 @@ class OrderSymmetryConfig:
 
 class OrderSymmetry(Symmetry):
     NAME = "order"
-    DESCRIPTION = "Permutation/order symmetry for sequences (optionally keeping first k fixed)."
+    DESCRIPTION = (
+        "Permutation/order symmetry for sequences (optionally keeping first k fixed)."
+    )
 
     def __init__(self, cfg: OrderSymmetryConfig):
         self.cfg = cfg
@@ -33,5 +36,4 @@ class OrderSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-SYMMETRIES.register('order')( OrderSymmetry )
+SYMMETRIES.register("order")(OrderSymmetry)

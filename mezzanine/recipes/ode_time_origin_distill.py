@@ -14,7 +14,10 @@ from ..pipelines.regression_distill import (
     train_regressor_distill,
     warrant_gap_regression,
 )
-from ..symmetries.time_origin_shift import TimeOriginShiftConfig, TimeOriginShiftSymmetry
+from ..symmetries.time_origin_shift import (
+    TimeOriginShiftConfig,
+    TimeOriginShiftSymmetry,
+)
 from ..worlds.ode_npz import ODENPZAdapter, ODENPZAdapterConfig
 from .recipe_base import Recipe
 
@@ -24,7 +27,9 @@ def _view_seed(global_seed: int, i: int, j: int) -> int:
 
 
 def _featurize(xs: List[Dict[str, Any]], *, include_time: bool) -> np.ndarray:
-    states = np.stack([np.asarray(ex["state"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
+    states = np.stack(
+        [np.asarray(ex["state"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )
     if not include_time:
         return states
     t = np.array([float(ex.get("t", 0.0)) for ex in xs], dtype=np.float32)[:, None]
@@ -32,7 +37,10 @@ def _featurize(xs: List[Dict[str, Any]], *, include_time: bool) -> np.ndarray:
 
 
 def _targets(xs: List[Dict[str, Any]]) -> np.ndarray:
-    return np.stack([np.asarray(ex["next_state"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
+    return np.stack(
+        [np.asarray(ex["next_state"], dtype=np.float32).reshape(-1) for ex in xs],
+        axis=0,
+    )
 
 
 def _load_trajs_npz(path: str, split: str) -> Tuple[np.ndarray, Optional[np.ndarray]]:
@@ -86,7 +94,9 @@ def _rollout_mse(
                     if t_arr.ndim == 1:
                         tt = np.array([[float(t_arr[t0 + h])]], dtype=np.float32)
                     else:
-                        tt = np.array([[float(t_arr[traj_idx, t0 + h])]], dtype=np.float32)
+                        tt = np.array(
+                            [[float(t_arr[traj_idx, t0 + h])]], dtype=np.float32
+                        )
                 X_in = np.concatenate([x_cur, tt], axis=1)
             else:
                 X_in = x_cur
@@ -111,7 +121,14 @@ class ODETimeOriginDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Data
-        p.add_argument("--dataset", "--data", dest="dataset", type=str, required=True, help="Path to ODE .npz")
+        p.add_argument(
+            "--dataset",
+            "--data",
+            dest="dataset",
+            type=str,
+            required=True,
+            help="Path to ODE .npz",
+        )
         p.add_argument("--n_train", type=int, default=50000)
         p.add_argument("--n_test", type=int, default=10000)
         p.add_argument("--teacher_include_time", action="store_true")
@@ -193,12 +210,16 @@ class ODETimeOriginDistillRecipe(Recipe):
 
         # Time-origin shift symmetry views
         # If the dataset provides time bounds, enforce them to avoid OOD time values.
-        t_vals = np.array([float(ex.get("t", 0.0)) for ex in train + test], dtype=np.float32)
+        t_vals = np.array(
+            [float(ex.get("t", 0.0)) for ex in train + test], dtype=np.float32
+        )
         t_min = float(np.min(t_vals))
         t_max = float(np.max(t_vals))
 
         sym = TimeOriginShiftSymmetry(
-            TimeOriginShiftConfig(max_shift=float(args.max_shift), t_min=t_min, t_max=t_max)
+            TimeOriginShiftConfig(
+                max_shift=float(args.max_shift), t_min=t_min, t_max=t_max
+            )
         )
 
         preds_views: List[np.ndarray] = []
@@ -206,7 +227,10 @@ class ODETimeOriginDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             Xv = _featurize(view, include_time=include_time_teacher)
             preds_views.append(predict(teacher, Xv, device=device))
         teacher_gap = warrant_gap_regression(np.stack(preds_views, axis=0))
@@ -229,7 +253,10 @@ class ODETimeOriginDistillRecipe(Recipe):
             if j == 0:
                 view = train
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j)) for i, ex in enumerate(train)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j))
+                    for i, ex in enumerate(train)
+                ]
             Xv = _featurize(view, include_time=include_time_teacher)
             train_preds_views.append(predict(teacher, Xv, device=device))
         y_soft = np.stack(train_preds_views, axis=0).mean(axis=0)
@@ -272,7 +299,10 @@ class ODETimeOriginDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             Xv = _featurize(view, include_time=False)
             preds_student_views.append(predict(student, Xv, device=device))
         student_gap = warrant_gap_regression(np.stack(preds_student_views, axis=0))
@@ -295,9 +325,16 @@ class ODETimeOriginDistillRecipe(Recipe):
             "world": {
                 "adapter": "ode_npz",
                 "adapter_config": asdict(adapter_cfg),
-                **{k: world["meta"].get(k) for k in ["dt", "n_train", "n_test"] if k in world.get("meta", {})},
+                **{
+                    k: world["meta"].get(k)
+                    for k in ["dt", "n_train", "n_test"]
+                    if k in world.get("meta", {})
+                },
             },
-            "symmetry": {"name": "time_origin_shift", "max_shift": float(args.max_shift)},
+            "symmetry": {
+                "name": "time_origin_shift",
+                "max_shift": float(args.max_shift),
+            },
             "teacher": {
                 "include_time": include_time_teacher,
                 "metrics": {

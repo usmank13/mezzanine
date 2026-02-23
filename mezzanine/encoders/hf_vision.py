@@ -10,6 +10,7 @@ from PIL import Image
 from transformers import AutoImageProcessor, AutoModel
 
 from ..core.cache import hash_dict
+from ..registry import ENCODERS
 from .base import Encoder
 
 
@@ -75,7 +76,9 @@ class HFVisionEncoder(Encoder):
             inp = self.processor(images=pil_imgs, return_tensors="pt")
             inp = {k: v.to(self.device) for k, v in inp.items()}
             with torch.no_grad():
-                with torch.amp.autocast("cuda", enabled=(self.cfg.fp16 and self.device.startswith("cuda"))):
+                with torch.amp.autocast(
+                    "cuda", enabled=(self.cfg.fp16 and self.device.startswith("cuda"))
+                ):
                     if self.cfg.embed_layer != 0:
                         out = self.model(**inp, output_hidden_states=True)
                         h = out.hidden_states[self.cfg.embed_layer]
@@ -87,14 +90,18 @@ class HFVisionEncoder(Encoder):
 
         i = 0
         while i < len(imgs):
-            chunk = imgs[i:i + bs]
+            chunk = imgs[i : i + bs]
             pil = [Image.fromarray(x) for x in chunk]
             try:
                 z = forward(pil)
                 out.append(z.detach().cpu().float().numpy())
                 i += bs
             except RuntimeError as e:
-                if "out of memory" in str(e).lower() and self.device.startswith("cuda") and bs > 1:
+                if (
+                    "out of memory" in str(e).lower()
+                    and self.device.startswith("cuda")
+                    and bs > 1
+                ):
                     bs = max(1, bs // 2)
                     torch.cuda.empty_cache()
                     continue
@@ -105,5 +112,4 @@ class HFVisionEncoder(Encoder):
 
 
 # Register
-from ..registry import ENCODERS
-ENCODERS.register('hf_vision')( HFVisionEncoder )
+ENCODERS.register("hf_vision")(HFVisionEncoder)

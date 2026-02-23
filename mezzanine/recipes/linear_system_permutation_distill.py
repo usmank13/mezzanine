@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -14,7 +14,10 @@ from ..pipelines.regression_distill import (
     warrant_gap_regression,
 )
 from ..symmetries.node_permutation import NodePermutationConfig, NodePermutationSymmetry
-from ..worlds.linear_system_npz import LinearSystemNPZAdapter, LinearSystemNPZAdapterConfig
+from ..worlds.linear_system_npz import (
+    LinearSystemNPZAdapter,
+    LinearSystemNPZAdapterConfig,
+)
 from .recipe_base import Recipe
 
 
@@ -23,13 +26,19 @@ def _view_seed(global_seed: int, i: int, j: int) -> int:
 
 
 def _featurize(xs: List[Dict[str, Any]]) -> np.ndarray:
-    A = np.stack([np.asarray(ex["A"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
-    b = np.stack([np.asarray(ex["b"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
+    A = np.stack(
+        [np.asarray(ex["A"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )
+    b = np.stack(
+        [np.asarray(ex["b"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )
     return np.concatenate([A, b], axis=1)
 
 
 def _targets(xs: List[Dict[str, Any]]) -> np.ndarray:
-    return np.stack([np.asarray(ex["x"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
+    return np.stack(
+        [np.asarray(ex["x"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )
 
 
 def _unpermute(vec: np.ndarray, perm: np.ndarray) -> np.ndarray:
@@ -67,14 +76,25 @@ class LinearSystemPermutationDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Data
-        p.add_argument("--dataset", "--data", dest="dataset", type=str, required=True, help="Path to linear system .npz")
+        p.add_argument(
+            "--dataset",
+            "--data",
+            dest="dataset",
+            type=str,
+            required=True,
+            help="Path to linear system .npz",
+        )
         p.add_argument("--n_train", type=int, default=50000)
         p.add_argument("--n_test", type=int, default=10000)
 
         # Symmetry
         p.add_argument("--k_train", type=int, default=4)
         p.add_argument("--k_test", type=int, default=8)
-        p.add_argument("--student_train_on_views", action="store_true", help="Train student on permuted views (equivariant)")
+        p.add_argument(
+            "--student_train_on_views",
+            action="store_true",
+            help="Train student on permuted views (equivariant)",
+        )
 
         # Model/training
         p.add_argument("--hidden", type=int, default=1024)
@@ -143,8 +163,12 @@ class LinearSystemPermutationDistillRecipe(Recipe):
         mse_test = float(np.mean((yhat_test - y_test) ** 2))
 
         # Residual norm ||Ax-b|| on test (gold physics check)
-        A_test = np.stack([np.asarray(ex["A"], dtype=np.float32) for ex in test], axis=0)
-        b_test = np.stack([np.asarray(ex["b"], dtype=np.float32) for ex in test], axis=0)
+        A_test = np.stack(
+            [np.asarray(ex["A"], dtype=np.float32) for ex in test], axis=0
+        )
+        b_test = np.stack(
+            [np.asarray(ex["b"], dtype=np.float32) for ex in test], axis=0
+        )
         resid = A_test @ yhat_test[..., None]
         resid = resid[..., 0] - b_test
         resid_l2 = float(np.mean(np.linalg.norm(resid, axis=1)))
@@ -157,7 +181,10 @@ class LinearSystemPermutationDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             pred = predict(teacher, _featurize(view), device=device)
             pred_canon = _canonicalize_preds(pred, view)
             teacher_view_preds.append(pred_canon)
@@ -170,7 +197,10 @@ class LinearSystemPermutationDistillRecipe(Recipe):
             if j == 0:
                 view = train
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j)) for i, ex in enumerate(train)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j))
+                    for i, ex in enumerate(train)
+                ]
             train_views.append(view)
             pred = predict(teacher, _featurize(view), device=device)
             pred_canon = _canonicalize_preds(pred, view)
@@ -210,6 +240,7 @@ class LinearSystemPermutationDistillRecipe(Recipe):
         # If training on views, we replicate the split across concatenated blocks.
         if bool(args.student_train_on_views):
             k = int(args.k_train)
+
             # replicate indices into each block
             def _replicate(idxs: np.ndarray) -> np.ndarray:
                 out = []
@@ -252,7 +283,10 @@ class LinearSystemPermutationDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             pred = predict(student, _featurize(view), device=device)
             pred_canon = _canonicalize_preds(pred, view)
             student_view_preds.append(pred_canon)
@@ -270,7 +304,14 @@ class LinearSystemPermutationDistillRecipe(Recipe):
                 "n_test": int(len(test)),
             },
             "symmetry": {"name": "node_permutation"},
-            "teacher": {"metrics": {**teacher_metrics, "mse_test": mse_test, "resid_l2": resid_l2, **teacher_gap}},
+            "teacher": {
+                "metrics": {
+                    **teacher_metrics,
+                    "mse_test": mse_test,
+                    "resid_l2": resid_l2,
+                    **teacher_gap,
+                }
+            },
             "student": {
                 "metrics": {
                     **student_metrics,

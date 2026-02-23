@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Minimal audio utilities for WAV IO and deterministic transforms."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -218,7 +218,9 @@ def normalize_rms_db(x: np.ndarray, target_db: float) -> np.ndarray:
     return (ensure_2d(x) * gain).astype(np.float32)
 
 
-def add_noise_db(x: np.ndarray, noise_db: float, *, rng: np.random.Generator) -> np.ndarray:
+def add_noise_db(
+    x: np.ndarray, noise_db: float, *, rng: np.random.Generator
+) -> np.ndarray:
     x2 = ensure_2d(x)
     sigma = float(10.0 ** (float(noise_db) / 20.0))
     n = rng.normal(0.0, sigma, size=x2.shape).astype(np.float32)
@@ -250,7 +252,9 @@ class PhaseVocoderConfig:
     win_length: int = 1024
 
 
-def time_stretch(x: np.ndarray, *, rate: float, cfg: Optional[PhaseVocoderConfig] = None) -> np.ndarray:
+def time_stretch(
+    x: np.ndarray, *, rate: float, cfg: Optional[PhaseVocoderConfig] = None
+) -> np.ndarray:
     """Time-stretch with a basic phase vocoder.
 
     rate > 1 speeds up (shorter), rate < 1 slows down (longer).
@@ -258,8 +262,6 @@ def time_stretch(x: np.ndarray, *, rate: float, cfg: Optional[PhaseVocoderConfig
     cfg = cfg or PhaseVocoderConfig()
     if rate <= 0:
         raise ValueError("rate must be > 0")
-
-    import torch
 
     x2 = ensure_2d(x)
     if x2.shape[1] > 1:
@@ -272,7 +274,9 @@ def time_stretch(x: np.ndarray, *, rate: float, cfg: Optional[PhaseVocoderConfig
     return y.astype(np.float32)
 
 
-def _time_stretch_mono(x: np.ndarray, rate: float, cfg: PhaseVocoderConfig) -> np.ndarray:
+def _time_stretch_mono(
+    x: np.ndarray, rate: float, cfg: PhaseVocoderConfig
+) -> np.ndarray:
     import torch
 
     xt = torch.from_numpy(x.astype(np.float32))
@@ -291,7 +295,9 @@ def _time_stretch_mono(x: np.ndarray, rate: float, cfg: PhaseVocoderConfig) -> n
     time_steps = torch.arange(0, n_frames, rate, dtype=torch.float32)
     n_out = int(time_steps.numel())
 
-    omega = 2.0 * math.pi * torch.arange(0, n_bins, dtype=torch.float32) / float(cfg.n_fft)
+    omega = (
+        2.0 * math.pi * torch.arange(0, n_bins, dtype=torch.float32) / float(cfg.n_fft)
+    )
     phi = torch.angle(D[:, 0])
 
     out = torch.zeros((n_bins, n_out), dtype=torch.complex64)
@@ -325,7 +331,9 @@ def _time_stretch_mono(x: np.ndarray, rate: float, cfg: PhaseVocoderConfig) -> n
     return y_out.detach().cpu().numpy().astype(np.float32)
 
 
-def pitch_shift(x: np.ndarray, *, n_steps: float, cfg: Optional[PhaseVocoderConfig] = None) -> np.ndarray:
+def pitch_shift(
+    x: np.ndarray, *, n_steps: float, cfg: Optional[PhaseVocoderConfig] = None
+) -> np.ndarray:
     """Pitch shift by n_steps semitones while preserving duration (approx)."""
     cfg = cfg or PhaseVocoderConfig()
     x2 = ensure_2d(x)

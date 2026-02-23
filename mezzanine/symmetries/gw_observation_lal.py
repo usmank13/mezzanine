@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """LALSimulation-based symmetry: detector observation (extrinsics + noise) for GW mergers.
 
 Given a BBH "world instance" with *intrinsic* parameters, this symmetry samples
@@ -33,11 +31,14 @@ Returned view
 }
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Dict, Literal, Optional, Tuple
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
 
 
@@ -50,6 +51,7 @@ def _msun_si() -> float:
     """Solar mass in SI units (kg)."""
     try:  # pragma: no cover
         import lal  # type: ignore
+
         return float(getattr(lal, "MSUN_SI"))
     except Exception:
         return 1.9884099021470417e30  # kg
@@ -59,6 +61,7 @@ def _pc_si() -> float:
     """Parsec in SI units (m)."""
     try:  # pragma: no cover
         import lal  # type: ignore
+
         return float(getattr(lal, "PC_SI"))
     except Exception:
         return 3.0856775814913673e16  # m
@@ -121,7 +124,9 @@ def _interp_psd_from_file(freqs: np.ndarray, path: str) -> np.ndarray:
     """Load a 2-column (f, psd) text file and interpolate onto `freqs`."""
     data = np.loadtxt(path, dtype=np.float64)
     if data.ndim != 2 or data.shape[1] < 2:
-        raise ValueError(f"PSD file must have at least 2 columns (f, psd); got shape {data.shape}")
+        raise ValueError(
+            f"PSD file must have at least 2 columns (f, psd); got shape {data.shape}"
+        )
     f0 = data[:, 0]
     s0 = data[:, 1]
     # Basic sanitization
@@ -162,7 +167,9 @@ def _complex_gaussian_noise_from_psd(
 
 @dataclass
 class GWObservationLALConfig:
-    approximant: Optional[str] = None  # default: use x.get("meta", {}).get("approximant")
+    approximant: Optional[str] = (
+        None  # default: use x.get("meta", {}).get("approximant")
+    )
 
     # Frequency grid for FD waveforms
     delta_f_hz: float = 1e-4
@@ -195,13 +202,17 @@ class GWObservationLALConfig:
             raise ValueError("f_lower_hz must be > 0")
         if not (self.f_upper_hz > self.f_lower_hz):
             raise ValueError("f_upper_hz must be > f_lower_hz")
-        if not (self.distance_mpc_min > 0 and self.distance_mpc_max > self.distance_mpc_min):
+        if not (
+            self.distance_mpc_min > 0 and self.distance_mpc_max > self.distance_mpc_min
+        ):
             raise ValueError("distance_mpc_min/max must satisfy 0 < min < max")
 
 
 class GWObservationLALSymmetry(Symmetry):
     NAME = "gw_observation_lal"
-    DESCRIPTION = "Generate FD detector strain views via LALSimulation (extrinsics + noise)."
+    DESCRIPTION = (
+        "Generate FD detector strain views via LALSimulation (extrinsics + noise)."
+    )
 
     def __init__(self, cfg: GWObservationLALConfig):
         cfg.validate()
@@ -222,7 +233,13 @@ class GWObservationLALSymmetry(Symmetry):
 
         # Extrinsics
         if cfg.distance_prior == "loguniform":
-            d_mpc = float(np.exp(rng.uniform(np.log(cfg.distance_mpc_min), np.log(cfg.distance_mpc_max))))
+            d_mpc = float(
+                np.exp(
+                    rng.uniform(
+                        np.log(cfg.distance_mpc_min), np.log(cfg.distance_mpc_max)
+                    )
+                )
+            )
         else:
             d_mpc = float(rng.uniform(cfg.distance_mpc_min, cfg.distance_mpc_max))
         distance_si = d_mpc * 1e6 * _pc_si()
@@ -247,7 +264,9 @@ class GWObservationLALSymmetry(Symmetry):
             import lal  # type: ignore
             import lalsimulation as lalsim  # type: ignore
         except Exception as e:
-            raise RuntimeError("GWObservationLALSymmetry requires `lal` + `lalsimulation` (LALSuite).") from e
+            raise RuntimeError(
+                "GWObservationLALSymmetry requires `lal` + `lalsimulation` (LALSuite)."
+            ) from e
 
         m1_si = m1_solar * _msun_si()
         m2_si = m2_solar * _msun_si()
@@ -402,6 +421,4 @@ class GWObservationLALSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-
 SYMMETRIES.register("gw_observation_lal")(GWObservationLALSymmetry)

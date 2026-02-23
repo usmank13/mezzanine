@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, Iterable, Iterator, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, Generic, Iterator, Optional, Tuple, TypeVar
 
 T = TypeVar("T")
 
@@ -32,27 +32,42 @@ class Registry(Generic[T]):
         self.kind = kind
         self._items: Dict[str, RegistryItem[T]] = {}
 
-    def register(self, name: Optional[str] = None, *, description: str = "") -> Callable[[T], T]:
+    def register(
+        self, name: Optional[str] = None, *, description: str = ""
+    ) -> Callable[[T], T]:
         def _decorator(obj: T) -> T:
             key = name or getattr(obj, "NAME", None) or getattr(obj, "__name__", None)
             if not key:
                 raise ValueError(f"Cannot infer registry name for {obj!r}")
             if key in self._items:
                 raise KeyError(f"Duplicate {self.kind} registration: {key}")
-            self._items[key] = RegistryItem(name=key, obj=obj, description=description or getattr(obj, "DESCRIPTION", ""))
+            self._items[key] = RegistryItem(
+                name=key,
+                obj=obj,
+                description=description or getattr(obj, "DESCRIPTION", ""),
+            )
             return obj
+
         return _decorator
 
     def get(self, name: str) -> T:
         if name not in self._items:
-            raise KeyError(f"Unknown {self.kind}: {name}. Available: {sorted(self._items.keys())}")
+            raise KeyError(
+                f"Unknown {self.kind}: {name}. Available: {sorted(self._items.keys())}"
+            )
         return self._items[name].obj
 
     def items(self) -> Dict[str, RegistryItem[T]]:
         return dict(self._items)
 
     def list(self) -> Dict[str, Dict[str, Any]]:
-        return {k: {"description": v.description, "object": getattr(v.obj, "__name__", str(v.obj))} for k, v in self._items.items()}
+        return {
+            k: {
+                "description": v.description,
+                "object": getattr(v.obj, "__name__", str(v.obj)),
+            }
+            for k, v in self._items.items()
+        }
 
     def __contains__(self, name: str) -> bool:
         return name in self._items

@@ -68,7 +68,7 @@ def random_fcc_positions(*, N: int, L: float) -> np.ndarray:
     n_cell = int(round(n_cell_float))
     if 4 * n_cell**3 != N:
         raise ValueError(
-            f"FCC initialization requires N=4*n^3. Got N={N}; closest n={n_cell} gives {4*n_cell**3}."
+            f"FCC initialization requires N=4*n^3. Got N={N}; closest n={n_cell} gives {4 * n_cell**3}."
         )
     a = L / float(n_cell)
     basis = np.array(
@@ -93,7 +93,9 @@ def random_fcc_positions(*, N: int, L: float) -> np.ndarray:
     return wrap_pbc(pos, L)
 
 
-def maxwell_boltzmann_velocities(*, rng: np.random.Generator, N: int, T: float, mass: float = 1.0) -> np.ndarray:
+def maxwell_boltzmann_velocities(
+    *, rng: np.random.Generator, N: int, T: float, mass: float = 1.0
+) -> np.ndarray:
     """Sample velocities from Maxwell–Boltzmann at temperature T (reduced units)."""
     std = np.sqrt(float(T) / float(mass))
     v = rng.normal(0.0, std, size=(N, 3)).astype(np.float64)
@@ -316,7 +318,9 @@ def union_find_largest_component(n: int, edges: np.ndarray) -> int:
     return int(size.max(initial=0))
 
 
-def droplet_label_from_snapshot(x: np.ndarray, *, L: float, r_cluster: float, frac_thr: float) -> int:
+def droplet_label_from_snapshot(
+    x: np.ndarray, *, L: float, r_cluster: float, frac_thr: float
+) -> int:
     """Binary label: 1 if a macroscopic droplet/cluster is present, else 0.
 
     We build a neighbor graph using a physical cutoff r_cluster (typically ~1.4–1.6
@@ -364,7 +368,9 @@ def run_lj_nvt(cfg: LJMDConfig) -> Dict[str, np.ndarray]:
     a = float(np.exp(-gamma * dt)) if gamma > 0 else 1.0
     b = float(np.sqrt((1.0 - a * a) * T / mass)) if gamma > 0 else 0.0
 
-    def step(x: np.ndarray, v: np.ndarray, f: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    def step(
+        x: np.ndarray, v: np.ndarray, f: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
         # B: half kick
         v = v + 0.5 * dt * f / mass
 
@@ -477,7 +483,9 @@ def build_dataset(cfg: DatasetGenConfig) -> None:
     out_path = Path(cfg.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    state_points: List[Tuple[float, float]] = [(float(r), float(T)) for r in cfg.rhos for T in cfg.temps]
+    state_points: List[Tuple[float, float]] = [
+        (float(r), float(T)) for r in cfg.rhos for T in cfg.temps
+    ]
     n_states = len(state_points)
 
     train_records: List[Dict[str, np.ndarray]] = []
@@ -492,7 +500,7 @@ def build_dataset(cfg: DatasetGenConfig) -> None:
         return int(s % (2**32 - 1))
 
     for state_id, (rho, T) in enumerate(state_points):
-        print(f"[dataset] state_id={state_id}/{n_states-1} rho={rho:.4f} T={T:.4f}")
+        print(f"[dataset] state_id={state_id}/{n_states - 1} rho={rho:.4f} T={T:.4f}")
 
         for rep in range(int(cfg.train_reps)):
             md_cfg = LJMDConfig(
@@ -512,7 +520,9 @@ def build_dataset(cfg: DatasetGenConfig) -> None:
                 seed=run_seed("train", state_id, rep),
             )
             rec = run_lj_nvt(md_cfg)
-            rec["state_id"] = np.full((rec["pos"].shape[0],), int(state_id), dtype=np.int64)
+            rec["state_id"] = np.full(
+                (rec["pos"].shape[0],), int(state_id), dtype=np.int64
+            )
             rec["rep"] = np.full((rec["pos"].shape[0],), int(rep), dtype=np.int64)
             train_records.append(rec)
 
@@ -534,7 +544,9 @@ def build_dataset(cfg: DatasetGenConfig) -> None:
                 seed=run_seed("test", state_id, rep),
             )
             rec = run_lj_nvt(md_cfg)
-            rec["state_id"] = np.full((rec["pos"].shape[0],), int(state_id), dtype=np.int64)
+            rec["state_id"] = np.full(
+                (rec["pos"].shape[0],), int(state_id), dtype=np.int64
+            )
             rec["rep"] = np.full((rec["pos"].shape[0],), int(rep), dtype=np.int64)
             test_records.append(rec)
 
@@ -544,7 +556,9 @@ def build_dataset(cfg: DatasetGenConfig) -> None:
     meta = {
         "generator": "examples/lj_generate_dataset.py",
         "cfg": asdict(cfg),
-        "state_points": [{"state_id": i, "rho": r, "T": t} for i, (r, t) in enumerate(state_points)],
+        "state_points": [
+            {"state_id": i, "rho": r, "T": t} for i, (r, t) in enumerate(state_points)
+        ],
         "label_fields": {
             "state_id": "multiclass (rho,T) index",
             "phase": "binary droplet=1 vs vapor=0 from cluster analysis",
@@ -589,7 +603,9 @@ def build_dataset(cfg: DatasetGenConfig) -> None:
                 )
         h5.flush()
 
-    print(f"[done] wrote {out_path}  (train_frames={train['pos'].shape[0]}, test_frames={test['pos'].shape[0]})")
+    print(
+        f"[done] wrote {out_path}  (train_frames={train['pos'].shape[0]}, test_frames={test['pos'].shape[0]})"
+    )
 
 
 def main() -> None:

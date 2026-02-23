@@ -20,9 +20,14 @@ import numpy as np
 try:
     from datasets import load_dataset
 except Exception as e:  # pragma: no cover
-    raise SystemExit("Please `pip install mezzanine[datasets]` (or `pip install datasets`).") from e
+    raise SystemExit(
+        "Please `pip install mezzanine[datasets]` (or `pip install datasets`)."
+    ) from e
 
-from mezzanine.predictors.hf_causal_lm import HFCausalLMChoicePredictor, HFCausalLMChoicePredictorConfig
+from mezzanine.predictors.hf_causal_lm import (
+    HFCausalLMChoicePredictor,
+    HFCausalLMChoicePredictorConfig,
+)
 from mezzanine.pipelines.text_distill import warrant_gap_from_views
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -42,7 +47,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_name", type=str, default="gpt2")
     ap.add_argument("--n", type=int, default=128)
-    ap.add_argument("--k", type=int, default=8, help="views per example (includes canonical)")
+    ap.add_argument(
+        "--k", type=int, default=8, help="views per example (includes canonical)"
+    )
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -57,10 +64,11 @@ def main() -> None:
         passages.append(passage)
         prompts.append(f"Passage: {passage}\nQuestion: {question}\nAnswer:")
 
-    predictor = HFCausalLMChoicePredictor(HFCausalLMChoicePredictorConfig(model_name=args.model_name))
+    predictor = HFCausalLMChoicePredictor(
+        HFCausalLMChoicePredictorConfig(model_name=args.model_name)
+    )
 
     # Build views by shuffling passage sentences
-    rng = np.random.default_rng(args.seed)
     all_views = []
     for j in range(args.k):
         if j == 0:
@@ -73,7 +81,9 @@ def main() -> None:
                 p2 = ex["passage"]
             else:
                 perm = list(sents)
-                rng2 = np.random.default_rng(int((args.seed + 1000*i + 97*j) % (2**32-1)))
+                rng2 = np.random.default_rng(
+                    int((args.seed + 1000 * i + 97 * j) % (2**32 - 1))
+                )
                 rng2.shuffle(perm)
                 p2 = join_sentences(perm)
             v.append(f"Passage: {p2}\nQuestion: {ex['question']}\nAnswer:")
@@ -92,6 +102,7 @@ def main() -> None:
     # Optional: show a few examples where belief flips
     flips = np.argmax(P_views[:, 0, :], axis=-1) != np.argmax(P_views[:, 1, :], axis=-1)
     print(f"flip_rate(view0 vs view1) = {flips.mean():.3f}")
+
 
 if __name__ == "__main__":
     main()

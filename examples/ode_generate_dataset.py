@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Callable, Tuple
 
 import numpy as np
 
@@ -23,6 +22,7 @@ def lorenz_rhs(sigma: float = 10.0, rho: float = 28.0, beta: float = 8.0 / 3.0):
         dx[1] = x[0] * (rho - x[2]) - x[1]
         dx[2] = x[0] * x[1] - beta * x[2]
         return dx
+
     return f
 
 
@@ -33,6 +33,7 @@ def vdp_rhs(mu: float = 5.0):
         dq = p
         dp = mu * (1.0 - q * q) * p - q
         return np.array([dq, dp], dtype=np.float64)
+
     return f
 
 
@@ -132,19 +133,26 @@ def main() -> None:
     if args.system == "lorenz":
         rhs = lorenz_rhs()
         D = 3
+
         def sample_x0() -> np.ndarray:
             return rng.normal(loc=0.0, scale=5.0, size=(D,)).astype(np.float64)
     else:
         rhs = vdp_rhs()
         D = 2
+
         def sample_x0() -> np.ndarray:
             return rng.normal(loc=0.0, scale=2.0, size=(D,)).astype(np.float64)
 
     n_train_default = 819
     n_test_default = 205
     if args.n_traj is not None:
-        if int(args.n_train_traj) != n_train_default or int(args.n_test_traj) != n_test_default:
-            raise ValueError("Specify --n_traj or (--n_train_traj, --n_test_traj), not both")
+        if (
+            int(args.n_train_traj) != n_train_default
+            or int(args.n_test_traj) != n_test_default
+        ):
+            raise ValueError(
+                "Specify --n_traj or (--n_train_traj, --n_test_traj), not both"
+            )
         n_total = int(args.n_traj)
         if n_total < 0:
             raise ValueError("--n_traj must be >= 0")
@@ -174,7 +182,9 @@ def main() -> None:
         source=str({"system": args.system, "dt": dt, "T": T}),
     )
 
-    print(f"Wrote {out} with {n_train} train trajectories and {n_test} test trajectories.")
+    print(
+        f"Wrote {out} with {n_train} train trajectories and {n_test} test trajectories."
+    )
 
 
 if __name__ == "__main__":

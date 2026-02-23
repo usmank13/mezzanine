@@ -43,7 +43,12 @@ def save_diagnostics(result: Dict[str, Any], out_path: Path) -> None:
     plt.close(fig)
 
 
-def save_montage(samples_test: List[Dict[str, Any]], out_path: Path, n_rows: int = 8, thumb: int = 192) -> None:
+def save_montage(
+    samples_test: List[Dict[str, Any]],
+    out_path: Path,
+    n_rows: int = 8,
+    thumb: int = 192,
+) -> None:
     rng = np.random.default_rng(0)
     n_rows = min(n_rows, len(samples_test))
     idxs = rng.choice(len(samples_test), size=n_rows, replace=False)
@@ -54,7 +59,11 @@ def save_montage(samples_test: List[Dict[str, Any]], out_path: Path, n_rows: int
     pad = 8
     title_h = 18
 
-    canvas = Image.new("RGB", (pad + len(cols) * (W + pad), pad + n_rows * (H + pad) + title_h), (255, 255, 255))
+    canvas = Image.new(
+        "RGB",
+        (pad + len(cols) * (W + pad), pad + n_rows * (H + pad) + title_h),
+        (255, 255, 255),
+    )
     draw = ImageDraw.Draw(canvas)
     try:
         font = ImageFont.truetype("DejaVuSans.ttf", 14)
@@ -72,7 +81,7 @@ def save_montage(samples_test: List[Dict[str, Any]], out_path: Path, n_rows: int
         canvas.paste(im0, (pad + 0 * (W + pad), y))
         canvas.paste(im1, (pad + 1 * (W + pad), y))
         # row label
-        lab = f"{s.get('game','')}"
+        lab = f"{s.get('game', '')}"
         draw.text((pad + 2, y + 2), lab, fill=(255, 255, 255), font=font)
         y += H + pad
 

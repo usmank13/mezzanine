@@ -23,11 +23,20 @@ def main() -> None:
     ap.add_argument("--out", type=str, required=True)
     ap.add_argument("--n_train", type=int, default=50000)
     ap.add_argument("--n_test", type=int, default=10000)
-    ap.add_argument("--L", "--n_grid", dest="L", type=int, default=256, help="Grid points (alias: --n_grid)")
+    ap.add_argument(
+        "--L",
+        "--n_grid",
+        dest="L",
+        type=int,
+        default=256,
+        help="Grid points (alias: --n_grid)",
+    )
     ap.add_argument("--K", type=int, default=8, help="Fourier modes")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--amp_scale", type=float, default=1.0)
-    ap.add_argument("--include_offset", action="store_true", help="Include a constant offset term")
+    ap.add_argument(
+        "--include_offset", action="store_true", help="Include a constant offset term"
+    )
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -46,7 +55,11 @@ def main() -> None:
     for i in range(n_total):
         a = rng.normal(scale=float(args.amp_scale), size=(K,))
         b = rng.normal(scale=float(args.amp_scale), size=(K,))
-        c0 = float(rng.normal(scale=float(args.amp_scale))) if bool(args.include_offset) else 0.0
+        c0 = (
+            float(rng.normal(scale=float(args.amp_scale)))
+            if bool(args.include_offset)
+            else 0.0
+        )
 
         # f(x) = c0 + Σ a_k sin(kx) + b_k cos(kx)
         vals = c0 * np.ones_like(x)
@@ -73,7 +86,9 @@ def main() -> None:
         source=str({"type": "fourier_energy", "L": L, "K": K, "dx": dx}),
     )
 
-    print(f"Wrote {out} with {n_train} train and {n_total - n_train} test samples. L={L} K={K}")
+    print(
+        f"Wrote {out} with {n_train} train and {n_total - n_train} test samples. L={L} K={K}"
+    )
 
 
 if __name__ == "__main__":

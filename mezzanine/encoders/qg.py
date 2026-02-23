@@ -31,7 +31,9 @@ class QGFlattenEncoderConfig:
 
 class QGFlattenEncoder(Encoder):
     NAME = "qg_flatten"
-    DESCRIPTION = "Flatten first K jet constituents into a fixed vector (order-sensitive)."
+    DESCRIPTION = (
+        "Flatten first K jet constituents into a fixed vector (order-sensitive)."
+    )
 
     def __init__(self, cfg: QGFlattenEncoderConfig):
         self.cfg = cfg
@@ -100,7 +102,9 @@ class QGEEC2EncoderConfig:
 
 class QGEEC2Encoder(Encoder):
     NAME = "qg_eec2"
-    DESCRIPTION = "Energy-weighted pairwise ΔR histogram (permutation + O(2) invariant)."
+    DESCRIPTION = (
+        "Energy-weighted pairwise ΔR histogram (permutation + O(2) invariant)."
+    )
 
     def __init__(self, cfg: QGEEC2EncoderConfig):
         self.cfg = cfg

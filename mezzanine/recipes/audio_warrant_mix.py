@@ -68,15 +68,35 @@ class AudioWarrantMixRecipe(Recipe):
         # Symmetry
         p.add_argument("--k_train", type=int, default=4)
         p.add_argument("--k_test", type=int, default=8)
-        p.add_argument("--gain_db_min", type=float, default=AudioPlaybackConfig.gain_db_min)
-        p.add_argument("--gain_db_max", type=float, default=AudioPlaybackConfig.gain_db_max)
-        p.add_argument("--noise_db_min", type=float, default=AudioPlaybackConfig.noise_db_min)
-        p.add_argument("--noise_db_max", type=float, default=AudioPlaybackConfig.noise_db_max)
+        p.add_argument(
+            "--gain_db_min", type=float, default=AudioPlaybackConfig.gain_db_min
+        )
+        p.add_argument(
+            "--gain_db_max", type=float, default=AudioPlaybackConfig.gain_db_max
+        )
+        p.add_argument(
+            "--noise_db_min", type=float, default=AudioPlaybackConfig.noise_db_min
+        )
+        p.add_argument(
+            "--noise_db_max", type=float, default=AudioPlaybackConfig.noise_db_max
+        )
         p.add_argument("--mono_prob", type=float, default=AudioPlaybackConfig.mono_prob)
-        p.add_argument("--lowpass_hz_min", type=float, default=AudioPlaybackConfig.lowpass_hz_min)
-        p.add_argument("--lowpass_hz_max", type=float, default=AudioPlaybackConfig.lowpass_hz_max)
-        p.add_argument("--time_stretch_min", type=float, default=AudioPlaybackConfig.time_stretch_min)
-        p.add_argument("--time_stretch_max", type=float, default=AudioPlaybackConfig.time_stretch_max)
+        p.add_argument(
+            "--lowpass_hz_min", type=float, default=AudioPlaybackConfig.lowpass_hz_min
+        )
+        p.add_argument(
+            "--lowpass_hz_max", type=float, default=AudioPlaybackConfig.lowpass_hz_max
+        )
+        p.add_argument(
+            "--time_stretch_min",
+            type=float,
+            default=AudioPlaybackConfig.time_stretch_min,
+        )
+        p.add_argument(
+            "--time_stretch_max",
+            type=float,
+            default=AudioPlaybackConfig.time_stretch_max,
+        )
 
         # Feature config
         p.add_argument("--n_bands", type=int, default=4)
@@ -119,7 +139,9 @@ class AudioWarrantMixRecipe(Recipe):
             adapter = Esc50Adapter(adapter_cfg)
         elif args.urbansound_csv:
             if not args.urbansound_audio_root:
-                raise ValueError("--urbansound_audio_root is required with --urbansound_csv.")
+                raise ValueError(
+                    "--urbansound_audio_root is required with --urbansound_csv."
+                )
             adapter_cfg = UrbanSound8KAdapterConfig(
                 csv_path=str(args.urbansound_csv),
                 audio_root=str(args.urbansound_audio_root),
@@ -135,7 +157,9 @@ class AudioWarrantMixRecipe(Recipe):
             adapter = UrbanSound8KAdapter(adapter_cfg)
         else:
             if not args.audio_dir:
-                raise ValueError("--audio_dir is required when not using --esc50_csv or --urbansound_csv.")
+                raise ValueError(
+                    "--audio_dir is required when not using --esc50_csv or --urbansound_csv."
+                )
             adapter_cfg = AudioFolderAdapterConfig(
                 audio_dir=args.audio_dir,
                 pattern=args.pattern,
@@ -156,13 +180,19 @@ class AudioWarrantMixRecipe(Recipe):
         if not train or not test:
             raise ValueError("Need non-empty train and test splits.")
         if "label" not in train[0]:
-            raise ValueError("Labels missing; use --label_from_subdir or provide labeled data.")
+            raise ValueError(
+                "Labels missing; use --label_from_subdir or provide labeled data."
+            )
 
         y_train = np.array([int(ex["label"]) for ex in train], dtype=np.int64)
         y_test = np.array([int(ex["label"]) for ex in test], dtype=np.int64)
         num_classes = int(max(y_train.max(), y_test.max()) + 1)
 
-        feat_cfg = AudioFeatureConfig(sr=int(args.sr), n_bands=int(args.n_bands), rolloff_frac=float(args.rolloff_frac))
+        feat_cfg = AudioFeatureConfig(
+            sr=int(args.sr),
+            n_bands=int(args.n_bands),
+            rolloff_frac=float(args.rolloff_frac),
+        )
 
         # Canonical embeddings
         Z_train = encode_examples(train, feat_cfg)
@@ -187,7 +217,10 @@ class AudioWarrantMixRecipe(Recipe):
         )
 
         base_head, base_metrics = train_hard_label_head(
-            Z_tr, y_tr, Z_val, y_val,
+            Z_tr,
+            y_tr,
+            Z_val,
+            y_val,
             cfg=head_cfg,
             steps=int(args.base_steps),
             batch_size=int(args.batch_size),
@@ -210,8 +243,12 @@ class AudioWarrantMixRecipe(Recipe):
             time_stretch_max=float(args.time_stretch_max),
         )
         symmetry = AudioPlaybackSymmetry(symmetry_cfg)
-        views_train = build_views(train, symmetry=symmetry, seed=int(args.seed), k=int(args.k_train))
-        views_test = build_views(test, symmetry=symmetry, seed=int(args.seed) + 1, k=int(args.k_test))
+        views_train = build_views(
+            train, symmetry=symmetry, seed=int(args.seed), k=int(args.k_train)
+        )
+        views_test = build_views(
+            test, symmetry=symmetry, seed=int(args.seed) + 1, k=int(args.k_test)
+        )
 
         # Teacher probs (train)
         P_views_train = []
@@ -230,11 +267,21 @@ class AudioWarrantMixRecipe(Recipe):
             P_views_test.append(predict_proba(base_head, Z_v, device=str(args.device)))
         P_views_test = np.stack(P_views_test, axis=1)
         base_gap = warrant_gap_from_views(P_views_test)
-        base_view_acc = float(np.mean([accuracy(P_views_test[:, i, :], y_test) for i in range(P_views_test.shape[1])]))
+        base_view_acc = float(
+            np.mean(
+                [
+                    accuracy(P_views_test[:, i, :], y_test)
+                    for i in range(P_views_test.shape[1])
+                ]
+            )
+        )
 
         # Student
         student_head, student_metrics = train_soft_label_head(
-            Z_tr, P_teacher[idx_tr], Z_val, y_val,
+            Z_tr,
+            P_teacher[idx_tr],
+            Z_val,
+            y_val,
             cfg=head_cfg,
             steps=int(args.student_steps),
             batch_size=int(args.batch_size),
@@ -249,12 +296,23 @@ class AudioWarrantMixRecipe(Recipe):
         P_views_test_student = []
         for v in views_test:
             Z_v = encode_examples(v, feat_cfg)
-            P_views_test_student.append(predict_proba(student_head, Z_v, device=str(args.device)))
+            P_views_test_student.append(
+                predict_proba(student_head, Z_v, device=str(args.device))
+            )
         P_views_test_student = np.stack(P_views_test_student, axis=1)
         student_gap = warrant_gap_from_views(P_views_test_student)
-        student_view_acc = float(np.mean([accuracy(P_views_test_student[:, i, :], y_test) for i in range(P_views_test_student.shape[1])]))
+        student_view_acc = float(
+            np.mean(
+                [
+                    accuracy(P_views_test_student[:, i, :], y_test)
+                    for i in range(P_views_test_student.shape[1])
+                ]
+            )
+        )
 
-        gap_reduced = student_gap["mean_tv_to_mean"] <= base_gap["mean_tv_to_mean"] * 0.9
+        gap_reduced = (
+            student_gap["mean_tv_to_mean"] <= base_gap["mean_tv_to_mean"] * 0.9
+        )
         acc_ok = student_acc >= base_acc - 0.05
 
         results = {
@@ -263,8 +321,18 @@ class AudioWarrantMixRecipe(Recipe):
             "feature_cfg": asdict(feat_cfg),
             "symmetry": symmetry.NAME,
             "metrics": {
-                "base": {"acc": base_acc, "view_acc": base_view_acc, **base_gap, **base_metrics},
-                "student": {"acc": student_acc, "view_acc": student_view_acc, **student_gap, **student_metrics},
+                "base": {
+                    "acc": base_acc,
+                    "view_acc": base_view_acc,
+                    **base_gap,
+                    **base_metrics,
+                },
+                "student": {
+                    "acc": student_acc,
+                    "view_acc": student_view_acc,
+                    **student_gap,
+                    **student_metrics,
+                },
             },
             "make_break": {
                 "gap_reduced": bool(gap_reduced),
@@ -274,5 +342,7 @@ class AudioWarrantMixRecipe(Recipe):
         }
 
         out_path = Path(ctx.out_dir) / "results.json"
-        out_path.write_text(json.dumps(results, indent=2, sort_keys=True), encoding="utf-8")
+        out_path.write_text(
+            json.dumps(results, indent=2, sort_keys=True), encoding="utf-8"
+        )
         return results

@@ -73,4 +73,3 @@ class SpaceGroupSymmetry(Symmetry):
         if bool(self.config.return_operation):
             out["symm_op"] = op
         return out
-

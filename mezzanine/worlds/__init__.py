@@ -17,40 +17,59 @@ from .eigen_npz import EigenNPZAdapter, EigenNPZAdapterConfig
 
 __all__ = [
     "WorldAdapter",
-    "IPhyreCollectConfig","collect_iphyre","IPhyreAdapter",
-    "HFDatasetAdapter","HFDatasetAdapterConfig",
-    "HFQADatasetAdapter","HFQADatasetAdapterConfig",
-    "LeRobotAdapter","LeRobotAdapterConfig",
-    "GymnasiumAdapter","GymnasiumAdapterConfig",
-    "GWMergerLALAdapter","GWMergerLALAdapterConfig",
-    "FinanceCSVTapeAdapter","FinanceCSVTapeAdapterConfig",
-    "AudioFolderAdapter","AudioFolderAdapterConfig",
-    "Esc50Adapter","Esc50AdapterConfig",
-    "UrbanSound8KAdapter","UrbanSound8KAdapterConfig",
-    "KeplerRootNPZAdapter","KeplerRootNPZAdapterConfig",
-    "LinearSystemNPZAdapter","LinearSystemNPZAdapterConfig",
-    "ODENPZAdapter","ODENPZAdapterConfig",
-    "IntegrationNPZAdapter","IntegrationNPZAdapterConfig",
-    "EigenNPZAdapter","EigenNPZAdapterConfig",
+    "IPhyreCollectConfig",
+    "collect_iphyre",
+    "IPhyreAdapter",
+    "HFDatasetAdapter",
+    "HFDatasetAdapterConfig",
+    "HFQADatasetAdapter",
+    "HFQADatasetAdapterConfig",
+    "LeRobotAdapter",
+    "LeRobotAdapterConfig",
+    "GymnasiumAdapter",
+    "GymnasiumAdapterConfig",
+    "GWMergerLALAdapter",
+    "GWMergerLALAdapterConfig",
+    "FinanceCSVTapeAdapter",
+    "FinanceCSVTapeAdapterConfig",
+    "AudioFolderAdapter",
+    "AudioFolderAdapterConfig",
+    "Esc50Adapter",
+    "Esc50AdapterConfig",
+    "UrbanSound8KAdapter",
+    "UrbanSound8KAdapterConfig",
+    "KeplerRootNPZAdapter",
+    "KeplerRootNPZAdapterConfig",
+    "LinearSystemNPZAdapter",
+    "LinearSystemNPZAdapterConfig",
+    "ODENPZAdapter",
+    "ODENPZAdapterConfig",
+    "IntegrationNPZAdapter",
+    "IntegrationNPZAdapterConfig",
+    "EigenNPZAdapter",
+    "EigenNPZAdapterConfig",
 ]
 
 # LJ adapter relies on h5py. Keep optional.
 try:  # pragma: no cover
     from .lj_fluid import LJFluidH5Adapter, LJFluidH5AdapterConfig
-    __all__ += ["LJFluidH5Adapter","LJFluidH5AdapterConfig"]
+
+    __all__ += ["LJFluidH5Adapter", "LJFluidH5AdapterConfig"]
 except Exception:
     pass
 
 # Jet-physics adapter relies on EnergyFlow. Keep optional.
 try:  # pragma: no cover
     from .qg_jets import QGJetsAdapter, QGJetsAdapterConfig
-    __all__ += ["QGJetsAdapter","QGJetsAdapterConfig"]
+
+    __all__ += ["QGJetsAdapter", "QGJetsAdapterConfig"]
 except Exception:
     pass
 
 # PDEBench adapter relies on h5py. Keep optional.
 try:  # pragma: no cover
     from .pdebench_h5 import PDEBenchH5Adapter, PDEBenchH5AdapterConfig
-    __all__ += ["PDEBenchH5Adapter","PDEBenchH5AdapterConfig"]
+
+    __all__ += ["PDEBenchH5Adapter", "PDEBenchH5AdapterConfig"]
 except Exception:
     pass

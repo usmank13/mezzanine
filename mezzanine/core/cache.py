@@ -79,7 +79,9 @@ class LatentCache:
             return self._path(key)
         p = self._path(key)
         if self.cfg.compress:
-            np.savez_compressed(p, arr=arr.astype(np.float32), meta=np.array(meta, dtype=object))
+            np.savez_compressed(
+                p, arr=arr.astype(np.float32), meta=np.array(meta, dtype=object)
+            )
         else:
             np.savez(p, arr=arr.astype(np.float32), meta=np.array(meta, dtype=object))
         return p

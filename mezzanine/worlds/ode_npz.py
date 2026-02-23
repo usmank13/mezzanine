@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -56,7 +56,9 @@ def _load_npz(path: Path) -> Dict[str, np.ndarray]:
         return out
 
 
-def _traj_time(t_arr: Optional[np.ndarray], traj_idx: int, t_idx: int) -> Optional[float]:
+def _traj_time(
+    t_arr: Optional[np.ndarray], traj_idx: int, t_idx: int
+) -> Optional[float]:
     if t_arr is None:
         return None
     if t_arr.ndim == 1:
@@ -89,7 +91,9 @@ class ODENPZAdapter(WorldAdapter):
         }
         return json.dumps(fp, sort_keys=True)
 
-    def _build_split(self, split: str, n_target: int, seed: int) -> List[Dict[str, Any]]:
+    def _build_split(
+        self, split: str, n_target: int, seed: int
+    ) -> List[Dict[str, Any]]:
         x = self._data[f"{split}_x"].astype(np.float32)
         t = self._data.get(f"{split}_t", None)
         if t is not None:
@@ -106,7 +110,11 @@ class ODENPZAdapter(WorldAdapter):
 
         pool = n_traj * (T - 1)
         n_take = min(int(n_target), int(pool))
-        idxs = deterministic_subsample_indices(pool, n_take, seed) if n_take > 0 else np.array([], dtype=np.int64)
+        idxs = (
+            deterministic_subsample_indices(pool, n_take, seed)
+            if n_take > 0
+            else np.array([], dtype=np.int64)
+        )
 
         out: List[Dict[str, Any]] = []
         for flat in idxs:
@@ -129,7 +137,9 @@ class ODENPZAdapter(WorldAdapter):
     def load(self) -> Dict[str, Any]:
         train = self._build_split("train", self.config.n_train, self.config.seed)
         test = self._build_split("test", self.config.n_test, self.config.seed + 1)
-        dt = float(self._data.get("dt", np.array([np.nan], dtype=np.float32)).reshape(-1)[0])
+        dt = float(
+            self._data.get("dt", np.array([np.nan], dtype=np.float32)).reshape(-1)[0]
+        )
         return {
             "train": train,
             "test": test,

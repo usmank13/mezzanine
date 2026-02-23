@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 try:
     import yaml  # type: ignore
+
     _HAS_YAML = True
 except Exception:
     _HAS_YAML = False
@@ -23,7 +23,9 @@ def load_config(path: Optional[str]) -> Dict[str, Any]:
     suf = p.suffix.lower()
     if suf in [".yaml", ".yml"]:
         if not _HAS_YAML:
-            raise RuntimeError("YAML config requested but PyYAML not installed. Install: pip install mezzanine[yaml]")
+            raise RuntimeError(
+                "YAML config requested but PyYAML not installed. Install: pip install mezzanine[yaml]"
+            )
         return yaml.safe_load(txt) or {}
     return json.loads(txt)
 
@@ -33,7 +35,9 @@ def save_config(path: str | Path, cfg: Dict[str, Any]) -> None:
     suf = p.suffix.lower()
     if suf in [".yaml", ".yml"]:
         if not _HAS_YAML:
-            raise RuntimeError("YAML output requested but PyYAML not installed. Install: pip install mezzanine[yaml]")
+            raise RuntimeError(
+                "YAML output requested but PyYAML not installed. Install: pip install mezzanine[yaml]"
+            )
         p.write_text(yaml.safe_dump(cfg, sort_keys=False))
         return
     p.write_text(json.dumps(cfg, indent=2, sort_keys=True))

@@ -17,6 +17,7 @@ def load_builtin_plugins() -> None:
     from .worlds import finance_csv  # noqa: F401
     from .worlds import esc50  # noqa: F401
     from .worlds import urbansound8k  # noqa: F401
+
     # Numerical kernels / physics add-ons (pure NumPy)
     from .worlds import kepler_root_npz  # noqa: F401
     from .worlds import linear_system_npz  # noqa: F401
@@ -54,17 +55,19 @@ def load_builtin_plugins() -> None:
     from .symmetries import action  # noqa: F401
     from .symmetries import gw_observation_lal  # noqa: F401
     from .symmetries import lj  # noqa: F401
-    from .symmetries import qg  # noqa: F401
+    from .symmetries import qg as qg_symmetries  # noqa: F401
     from .symmetries import audio_playback  # noqa: F401
     from .symmetries import market_bar_offset  # noqa: F401
     from .symmetries import ens_member  # noqa: F401
     from .symmetries import field_codec  # noqa: F401
+
     # Numerical kernels / physics add-ons
     from .symmetries import angle_wrap  # noqa: F401
     from .symmetries import node_permutation  # noqa: F401
     from .symmetries import time_origin_shift  # noqa: F401
     from .symmetries import circular_shift  # noqa: F401
     from .symmetries import periodic_translation  # noqa: F401
+
     try:  # pragma: no cover
         from .symmetries import space_group  # noqa: F401
     except Exception:
@@ -85,7 +88,7 @@ def load_builtin_plugins() -> None:
         from .encoders import lj  # noqa: F401
     except Exception:
         pass
-    from .encoders import qg  # noqa: F401
+    from .encoders import qg as qg_encoders  # noqa: F401
 
     # Recipes
     try:  # pragma: no cover

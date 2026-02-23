@@ -31,7 +31,7 @@ class MySymmetry(Symmetry):
         self.cfg = cfg
 
     def sample(self, x: Sequence[T], *, seed: int) -> list[T]:
-        rng = np.random.default_rng(seed)
+        np.random.default_rng(seed)  # TODO: use RNG for your transform
         x = list(x)
         # TODO: implement transform using rng
         return x

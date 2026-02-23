@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """LALSuite-based gravitational-wave BBH merger *world* adapter.
 
 This adapter samples *intrinsic* binary black hole (BBH) parameters for a dataset
@@ -41,6 +39,7 @@ Example output (one item)
 
 """
 
+from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Literal, Tuple
@@ -52,7 +51,9 @@ from .base import WorldAdapter
 from ..registry import ADAPTERS
 
 
-def _log_uniform(rng: np.random.Generator, lo: float, hi: float, *, size: int) -> np.ndarray:
+def _log_uniform(
+    rng: np.random.Generator, lo: float, hi: float, *, size: int
+) -> np.ndarray:
     lo = float(lo)
     hi = float(hi)
     if not (lo > 0.0 and hi > 0.0 and hi > lo):
@@ -61,7 +62,9 @@ def _log_uniform(rng: np.random.Generator, lo: float, hi: float, *, size: int) -
     return np.exp(u)
 
 
-def _m1_m2_from_mchirp_q(mchirp: np.ndarray, q: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _m1_m2_from_mchirp_q(
+    mchirp: np.ndarray, q: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
     """Convert chirp mass and mass ratio q>=1 to component masses.
 
     Derivation (q = m1/m2 >= 1):
@@ -131,13 +134,21 @@ class GWMergerLALAdapterConfig:
     def validate(self) -> None:
         if self.n_train <= 0 or self.n_test <= 0:
             raise ValueError("n_train and n_test must be > 0")
-        if not (self.mchirp_min_solar > 0 and self.mchirp_max_solar > self.mchirp_min_solar):
-            raise ValueError("mchirp_min_solar and mchirp_max_solar must satisfy 0 < min < max")
+        if not (
+            self.mchirp_min_solar > 0 and self.mchirp_max_solar > self.mchirp_min_solar
+        ):
+            raise ValueError(
+                "mchirp_min_solar and mchirp_max_solar must satisfy 0 < min < max"
+            )
         if not (self.q_min >= 1.0 and self.q_max > self.q_min):
             raise ValueError("q_min must be >= 1 and q_max > q_min")
         if not (0.0 <= self.chi_max < 1.0):
             raise ValueError("chi_max must be in [0, 1)")
-        if not (-1.0 < self.chi_z_min < 1.0 and -1.0 < self.chi_z_max < 1.0 and self.chi_z_max > self.chi_z_min):
+        if not (
+            -1.0 < self.chi_z_min < 1.0
+            and -1.0 < self.chi_z_max < 1.0
+            and self.chi_z_max > self.chi_z_min
+        ):
             raise ValueError("chi_z_min/chi_z_max must be within (-1,1) and max>min")
         if self.spin_prior not in ("aligned_z", "isotropic"):
             raise ValueError(f"Unsupported spin_prior: {self.spin_prior}")
@@ -147,7 +158,10 @@ class GWMergerLALAdapterConfig:
             raise ValueError(f"Unsupported q_prior: {self.q_prior}")
 
 
-@ADAPTERS.register("gw_merger_lal", description="Sample intrinsic BBH parameters for LALSimulation waveform generation.")
+@ADAPTERS.register(
+    "gw_merger_lal",
+    description="Sample intrinsic BBH parameters for LALSimulation waveform generation.",
+)
 class GWMergerLALAdapter(WorldAdapter):
     NAME = "gw_merger_lal"
     DESCRIPTION = "Intrinsic BBH merger parameter sampler (for LALSimulation-based waveform generation). "
@@ -163,6 +177,7 @@ class GWMergerLALAdapter(WorldAdapter):
         try:  # pragma: no cover
             import lal  # type: ignore
             import lalsimulation  # type: ignore
+
             d["lal_version"] = getattr(lal, "__version__", None)
             d["lalsimulation_version"] = getattr(lalsimulation, "__version__", None)
         except Exception:
@@ -170,11 +185,15 @@ class GWMergerLALAdapter(WorldAdapter):
             d["lalsimulation_version"] = None
         return hash_dict(d)
 
-    def _sample_intrinsics(self, *, rng: np.random.Generator, n: int) -> List[Dict[str, Any]]:
+    def _sample_intrinsics(
+        self, *, rng: np.random.Generator, n: int
+    ) -> List[Dict[str, Any]]:
         cfg = self.cfg
 
         if cfg.mass_prior == "loguniform":
-            mchirp = _log_uniform(rng, cfg.mchirp_min_solar, cfg.mchirp_max_solar, size=n)
+            mchirp = _log_uniform(
+                rng, cfg.mchirp_min_solar, cfg.mchirp_max_solar, size=n
+            )
         else:
             mchirp = rng.uniform(cfg.mchirp_min_solar, cfg.mchirp_max_solar, size=n)
 
@@ -215,8 +234,16 @@ class GWMergerLALAdapter(WorldAdapter):
                         "mchirp_solar": float(mchirp[i]),
                         "q": float(q[i]),
                         "eta": float(eta[i]),
-                        "chi1": [float(chi1[i, 0]), float(chi1[i, 1]), float(chi1[i, 2])],
-                        "chi2": [float(chi2[i, 0]), float(chi2[i, 1]), float(chi2[i, 2])],
+                        "chi1": [
+                            float(chi1[i, 0]),
+                            float(chi1[i, 1]),
+                            float(chi1[i, 2]),
+                        ],
+                        "chi2": [
+                            float(chi2[i, 0]),
+                            float(chi2[i, 1]),
+                            float(chi2[i, 2]),
+                        ],
                         "chi_eff": float(chi_eff[i]),
                     },
                     "meta": {

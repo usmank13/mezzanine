@@ -83,10 +83,12 @@ def test_audio_warrant_mix_e2e(tmp_path: Path) -> None:
 
     cli.main_args(argv)
 
-    results = (out_dir / "results.json")
+    results = out_dir / "results.json"
     assert results.exists(), "results.json not written"
     data = json.loads(results.read_text(encoding="utf-8"))
     base_acc = float(data["metrics"]["base"]["acc"])
     base_view_acc = float(data["metrics"]["base"]["view_acc"])
     assert base_acc > 0.75, "base accuracy too low on clean audio"
-    assert base_view_acc < base_acc - 0.05, "playback nuisance should reduce base accuracy"
+    assert base_view_acc < base_acc - 0.05, (
+        "playback nuisance should reduce base accuracy"
+    )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -12,7 +11,9 @@ class BaseLogger:
     The goal is to make W&B / TensorBoard integration easy, without requiring them.
     """
 
-    def log_metrics(self, metrics: Dict[str, float], *, step: Optional[int] = None, prefix: str = "") -> None:
+    def log_metrics(
+        self, metrics: Dict[str, float], *, step: Optional[int] = None, prefix: str = ""
+    ) -> None:
         return
 
     def log_text(self, key: str, text: str, *, step: Optional[int] = None) -> None:
@@ -39,10 +40,14 @@ class TensorBoardLogger(BaseLogger):
         try:
             from torch.utils.tensorboard import SummaryWriter  # type: ignore
         except Exception as e:
-            raise RuntimeError("TensorBoard requested but not installed. Install: pip install mezzanine[tensorboard]") from e
+            raise RuntimeError(
+                "TensorBoard requested but not installed. Install: pip install mezzanine[tensorboard]"
+            ) from e
         self.writer = SummaryWriter(log_dir=str(cfg.log_dir))
 
-    def log_metrics(self, metrics: Dict[str, float], *, step: Optional[int] = None, prefix: str = "") -> None:
+    def log_metrics(
+        self, metrics: Dict[str, float], *, step: Optional[int] = None, prefix: str = ""
+    ) -> None:
         s = 0 if step is None else int(step)
         for k, v in metrics.items():
             self.writer.add_scalar(prefix + k, float(v), s)
@@ -75,7 +80,9 @@ class WandbLogger(BaseLogger):
         try:
             import wandb  # type: ignore
         except Exception as e:
-            raise RuntimeError("wandb requested but not installed. Install: pip install mezzanine[wandb]") from e
+            raise RuntimeError(
+                "wandb requested but not installed. Install: pip install mezzanine[wandb]"
+            ) from e
 
         self.wandb = wandb
         init_kwargs: Dict[str, Any] = {"project": cfg.project}
@@ -89,7 +96,9 @@ class WandbLogger(BaseLogger):
             init_kwargs["config"] = cfg.config
         self.run = wandb.init(**init_kwargs)
 
-    def log_metrics(self, metrics: Dict[str, float], *, step: Optional[int] = None, prefix: str = "") -> None:
+    def log_metrics(
+        self, metrics: Dict[str, float], *, step: Optional[int] = None, prefix: str = ""
+    ) -> None:
         data = {prefix + k: float(v) for k, v in metrics.items()}
         if step is not None:
             data["step"] = int(step)

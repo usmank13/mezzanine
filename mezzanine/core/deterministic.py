@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import os
 import random
-from dataclasses import dataclass
-from typing import List, Optional, Sequence
 
 import numpy as np
 
 try:
     import torch
+
     _HAS_TORCH = True
 except Exception:
     _HAS_TORCH = False

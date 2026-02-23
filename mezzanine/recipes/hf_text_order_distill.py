@@ -4,13 +4,10 @@ import argparse
 import json
 import re
 from dataclasses import asdict
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 
-from ..core.cache import hash_dict
-from ..core.deterministic import deterministic_subsample_indices
 from ..encoders.hf_language import HFLanguageEncoder, HFLanguageEncoderConfig
 from ..symmetries.order import OrderSymmetry, OrderSymmetryConfig
 from ..pipelines.text_distill import (
@@ -61,7 +58,13 @@ def _cached_encode(
     if cache is None:
         return encoder.encode(texts)
 
-    key = cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split=split, tag=tag, extra=extra)
+    key = cache.make_key(
+        world_fingerprint=world_fp,
+        encoder_fingerprint=enc_fp,
+        split=split,
+        tag=tag,
+        extra=extra,
+    )
     got = cache.get(key)
     if got is not None:
         arr, _meta = got
@@ -80,7 +83,6 @@ def build_views(
     min_sentences: int = 2,
 ) -> List[List[str]]:
     """Return list of K view-lists, each view-list is texts for all examples."""
-    N = len(texts)
     # View 0: canonical
     views: List[List[str]] = [list(texts)]
     if K <= 1:
@@ -117,8 +119,18 @@ class HFTextOrderDistillRecipe(Recipe):
         p.add_argument("--n_test", type=int, default=2000)
 
         # Symmetry
-        p.add_argument("--k_train", type=int, default=8, help="Number of sentence-order views for teacher expectation (includes canonical).")
-        p.add_argument("--k_test", type=int, default=16, help="Number of sentence-order views for evaluation (includes canonical).")
+        p.add_argument(
+            "--k_train",
+            type=int,
+            default=8,
+            help="Number of sentence-order views for teacher expectation (includes canonical).",
+        )
+        p.add_argument(
+            "--k_test",
+            type=int,
+            default=16,
+            help="Number of sentence-order views for evaluation (includes canonical).",
+        )
         p.add_argument("--min_sentences", type=int, default=2)
 
         # Encoder
@@ -136,7 +148,12 @@ class HFTextOrderDistillRecipe(Recipe):
         p.add_argument("--student_steps", type=int, default=800)
         p.add_argument("--batch_size", type=int, default=256)
         p.add_argument("--lr", type=float, default=1e-3)
-        p.add_argument("--hard_label_weight", type=float, default=0.0, help="Optional mix-in of hard labels during distillation (0..1).")
+        p.add_argument(
+            "--hard_label_weight",
+            type=float,
+            default=0.0,
+            help="Optional mix-in of hard labels during distillation (0..1).",
+        )
 
         args = p.parse_args(argv)
         # Apply config file defaults (only where user didn't override)
@@ -144,7 +161,14 @@ class HFTextOrderDistillRecipe(Recipe):
         self.apply_config_defaults(p, args, file_cfg)
 
         ctx = self.build_context(args)
-        device = "cuda" if (hasattr(__import__("torch"), "cuda") and __import__("torch").cuda.is_available()) else "cpu"  # type: ignore[attr-defined]
+        device = (
+            "cuda"
+            if (
+                hasattr(__import__("torch"), "cuda")
+                and __import__("torch").cuda.is_available()
+            )
+            else "cpu"
+        )  # type: ignore[attr-defined]
 
         # Build adapter
         adapter_cfg = HFDatasetAdapterConfig(
@@ -221,11 +245,20 @@ class HFTextOrderDistillRecipe(Recipe):
         Z_tr, y_tr = Z_train[idx_tr], y_train[idx_tr]
         Z_val, y_val = Z_train[idx_val], y_train[idx_val]
 
-        head_cfg = MLPHeadConfig(in_dim=int(Z_train.shape[1]), num_classes=num_classes, hidden=int(args.hidden), depth=int(args.depth), dropout=float(args.dropout))
+        head_cfg = MLPHeadConfig(
+            in_dim=int(Z_train.shape[1]),
+            num_classes=num_classes,
+            hidden=int(args.hidden),
+            depth=int(args.depth),
+            dropout=float(args.dropout),
+        )
 
         # Train baseline head (hard labels)
         base_head, base_metrics = train_hard_label_head(
-            Z_tr, y_tr, Z_val, y_val,
+            Z_tr,
+            y_tr,
+            Z_val,
+            y_val,
             cfg=head_cfg,
             steps=int(args.base_steps),
             batch_size=int(args.batch_size),
@@ -239,7 +272,13 @@ class HFTextOrderDistillRecipe(Recipe):
         base_acc = accuracy(P_base_test_canon, y_test)
 
         # Build test views and measure baseline warrant gap
-        test_views = build_views(x_test, symmetry=symmetry, seed=int(args.seed) + 123, K=int(args.k_test), min_sentences=int(args.min_sentences))
+        test_views = build_views(
+            x_test,
+            symmetry=symmetry,
+            seed=int(args.seed) + 123,
+            K=int(args.k_test),
+            min_sentences=int(args.min_sentences),
+        )
         # Encode each view
         Z_test_views: List[np.ndarray] = [Z_test]  # view0 = canon
         for j in range(1, int(args.k_test)):
@@ -249,18 +288,30 @@ class HFTextOrderDistillRecipe(Recipe):
                 enc_fp=enc_fp,
                 split="test",
                 tag=f"order_view_{j}",
-                extra={"k": int(args.k_test), "j": j, "min_sentences": int(args.min_sentences)},
+                extra={
+                    "k": int(args.k_test),
+                    "j": j,
+                    "min_sentences": int(args.min_sentences),
+                },
                 encoder=encoder,
                 texts=test_views[j],
             )
             Z_test_views.append(Zj)
 
         # Predict probabilities for each view
-        P_views = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1)  # [N,K,C]
+        P_views = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )  # [N,K,C]
         gap_base = warrant_gap_from_views(P_views)
 
         # Teacher: symmetry-marginalized probs on train via baseline head
-        train_views = build_views(x_train, symmetry=symmetry, seed=int(args.seed) + 999, K=int(args.k_train), min_sentences=int(args.min_sentences))
+        train_views = build_views(
+            x_train,
+            symmetry=symmetry,
+            seed=int(args.seed) + 999,
+            K=int(args.k_train),
+            min_sentences=int(args.min_sentences),
+        )
         Z_train_views: List[np.ndarray] = [Z_train]  # view0
         for j in range(1, int(args.k_train)):
             Zj = _cached_encode(
@@ -269,12 +320,19 @@ class HFTextOrderDistillRecipe(Recipe):
                 enc_fp=enc_fp,
                 split="train",
                 tag=f"order_view_{j}",
-                extra={"k": int(args.k_train), "j": j, "min_sentences": int(args.min_sentences)},
+                extra={
+                    "k": int(args.k_train),
+                    "j": j,
+                    "min_sentences": int(args.min_sentences),
+                },
                 encoder=encoder,
                 texts=train_views[j],
             )
             Z_train_views.append(Zj)
-        P_train_views = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_train_views], axis=1)
+        P_train_views = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_train_views],
+            axis=1,
+        )
         P_teacher = P_train_views.mean(axis=1)  # [N,C]
 
         # Train student head on canonical embeddings to match teacher expectation
@@ -298,7 +356,9 @@ class HFTextOrderDistillRecipe(Recipe):
         stud_acc = accuracy(P_stud_test_canon, y_test)
 
         # Student gap across the same views (evaluate student on view embeddings too)
-        P_stud_views = np.stack([predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1)
+        P_stud_views = np.stack(
+            [predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )
         gap_stud = warrant_gap_from_views(P_stud_views)
 
         # Make / break
@@ -306,7 +366,11 @@ class HFTextOrderDistillRecipe(Recipe):
         stud_gap = float(gap_stud["mean_tv_to_mean"])
         tv_rel_improve = float((base_gap - stud_gap) / max(1e-9, base_gap))
         acc_drop = float(base_acc - stud_acc)
-        verdict = "MAKE ✅" if (tv_rel_improve >= 0.2 and acc_drop <= 0.05) else "BREAK / INCONCLUSIVE ❌"
+        verdict = (
+            "MAKE ✅"
+            if (tv_rel_improve >= 0.2 and acc_drop <= 0.05)
+            else "BREAK / INCONCLUSIVE ❌"
+        )
 
         summary = {
             "exp": self.NAME,
@@ -321,7 +385,12 @@ class HFTextOrderDistillRecipe(Recipe):
                 "meta": meta,
             },
             "encoder": asdict(enc_cfg),
-            "symmetry": {"name": "order", "k_train": int(args.k_train), "k_test": int(args.k_test), "min_sentences": int(args.min_sentences)},
+            "symmetry": {
+                "name": "order",
+                "k_train": int(args.k_train),
+                "k_test": int(args.k_test),
+                "min_sentences": int(args.min_sentences),
+            },
             "baseline": {
                 "acc": base_acc,
                 "gap_mean_tv_to_mean": base_gap,
@@ -344,13 +413,16 @@ class HFTextOrderDistillRecipe(Recipe):
         (ctx.out_dir / "results.json").write_text(json.dumps(summary, indent=2))
         plot_text_order_distill(summary, ctx.out_dir / "diagnostics.png")
 
-        ctx.logger.log_metrics({
-            "baseline/acc": base_acc,
-            "baseline/gap_tv": base_gap,
-            "student/acc": stud_acc,
-            "student/gap_tv": stud_gap,
-            "make_break/tv_rel_improve": tv_rel_improve,
-            "make_break/acc_drop": acc_drop,
-        }, step=0)
+        ctx.logger.log_metrics(
+            {
+                "baseline/acc": base_acc,
+                "baseline/gap_tv": base_gap,
+                "student/acc": stud_acc,
+                "student/gap_tv": stud_gap,
+                "make_break/tv_rel_improve": tv_rel_improve,
+                "make_break/acc_drop": acc_drop,
+            },
+            step=0,
+        )
 
         return summary

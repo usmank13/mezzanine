@@ -68,7 +68,9 @@ class IntegrationNPZAdapter(WorldAdapter):
         }
         return json.dumps(fp, sort_keys=True)
 
-    def _build_split(self, split: str, n_target: int, seed: int) -> List[Dict[str, Any]]:
+    def _build_split(
+        self, split: str, n_target: int, seed: int
+    ) -> List[Dict[str, Any]]:
         f = self._data[f"{split}_f"].astype(np.float32)
         y = self._data[f"{split}_y"].astype(np.float32)
         if y.ndim == 1:
@@ -82,9 +84,15 @@ class IntegrationNPZAdapter(WorldAdapter):
 
         n_total = f.shape[0]
         n_take = min(int(n_target), int(n_total))
-        idxs = deterministic_subsample_indices(n_total, n_take, seed) if n_take > 0 else np.array([], dtype=np.int64)
+        idxs = (
+            deterministic_subsample_indices(n_total, n_take, seed)
+            if n_take > 0
+            else np.array([], dtype=np.int64)
+        )
 
-        dx = float(self._data.get("dx", np.array([np.nan], dtype=np.float32)).reshape(-1)[0])
+        dx = float(
+            self._data.get("dx", np.array([np.nan], dtype=np.float32)).reshape(-1)[0]
+        )
         out: List[Dict[str, Any]] = []
         for i in idxs:
             out.append({"f": f[int(i)], "y": y[int(i)], "dx": dx})
@@ -93,7 +101,11 @@ class IntegrationNPZAdapter(WorldAdapter):
     def load(self) -> Dict[str, Any]:
         train = self._build_split("train", self.config.n_train, self.config.seed)
         test = self._build_split("test", self.config.n_test, self.config.seed + 1)
-        L = int(train[0]["f"].shape[0]) if train else (int(test[0]["f"].shape[0]) if test else 0)
+        L = (
+            int(train[0]["f"].shape[0])
+            if train
+            else (int(test[0]["f"].shape[0]) if test else 0)
+        )
         return {
             "train": train,
             "test": test,

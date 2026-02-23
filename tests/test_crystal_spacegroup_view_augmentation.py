@@ -14,7 +14,9 @@ def test_build_view_augmented_split_repeats_labels_and_flattens_views() -> None:
     y_hard = np.array([[10.0], [20.0]], dtype=np.float32)
 
     idx = np.array([1], dtype=np.int64)
-    X_out, y_soft_out, y_hard_out = _build_view_augmented_split(X_views, y_soft, y_hard, idx)
+    X_out, y_soft_out, y_hard_out = _build_view_augmented_split(
+        X_views, y_soft, y_hard, idx
+    )
 
     assert X_out.shape == (K * 1, d)
     assert y_soft_out.shape == (K * 1, 1)
@@ -26,4 +28,3 @@ def test_build_view_augmented_split_repeats_labels_and_flattens_views() -> None:
 
     assert np.allclose(y_soft_out[:, 0], y_soft[1, 0])
     assert np.allclose(y_hard_out[:, 0], y_hard[1, 0])
-

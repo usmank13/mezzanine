@@ -158,7 +158,9 @@ class PDEBenchH5Adapter(WorldAdapter):
         Y = u[:, t1]
         return X, Y
 
-    def _build_split(self, split: str, n_target: int, seed: int) -> List[Dict[str, Any]]:
+    def _build_split(
+        self, split: str, n_target: int, seed: int
+    ) -> List[Dict[str, Any]]:
         cfg = self.config
         group = cfg.train_group if split == "train" else cfg.test_group
 
@@ -172,7 +174,11 @@ class PDEBenchH5Adapter(WorldAdapter):
 
         n_total = int(X.shape[0])
         n_take = min(int(n_target), n_total)
-        idxs = deterministic_subsample_indices(n_total, n_take, seed) if n_take > 0 else np.array([], dtype=np.int64)
+        idxs = (
+            deterministic_subsample_indices(n_total, n_take, seed)
+            if n_take > 0
+            else np.array([], dtype=np.int64)
+        )
 
         out: List[Dict[str, Any]] = []
         for i in idxs:
@@ -183,7 +189,11 @@ class PDEBenchH5Adapter(WorldAdapter):
     def load(self) -> Dict[str, Any]:
         train = self._build_split("train", self.config.n_train, self.config.seed)
         test = self._build_split("test", self.config.n_test, self.config.seed + 1)
-        x_shape = tuple(train[0]["x"].shape) if train else (tuple(test[0]["x"].shape) if test else ())
+        x_shape = (
+            tuple(train[0]["x"].shape)
+            if train
+            else (tuple(test[0]["x"].shape) if test else ())
+        )
         return {
             "train": train,
             "test": test,

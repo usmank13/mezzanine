@@ -1,6 +1,3 @@
-
-from __future__ import annotations
-
 """GW SMBH merger visualization recipe (GR waveform + honest visuals).
 
 Run:
@@ -23,6 +20,8 @@ Notes
   Nyquist frequency. This is *band-limited interpolation* (no new physics is added).
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 from dataclasses import asdict
@@ -30,6 +29,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+
+from ..core.config import deep_update, load_config
+from .recipe_base import Recipe
 
 
 def _ensure_matplotlib() -> None:
@@ -93,7 +95,9 @@ def _fd_to_td_irfft_padded(
     return t.astype(np.float64), x.astype(np.float64), float(dt)
 
 
-def _estimate_envelope_and_inst_freq(t: np.ndarray, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _estimate_envelope_and_inst_freq(
+    t: np.ndarray, x: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
     """Return amplitude envelope and instantaneous frequency estimate.
 
     Uses Hilbert transform to compute an analytic signal, then differentiates its phase.
@@ -128,7 +132,9 @@ def _estimate_envelope_and_inst_freq(t: np.ndarray, x: np.ndarray) -> Tuple[np.n
     return env.astype(np.float64), finst.astype(np.float64)
 
 
-def _simple_view_feature(view: Dict[str, Any], *, fmin: float, fmax: float) -> np.ndarray:
+def _simple_view_feature(
+    view: Dict[str, Any], *, fmin: float, fmax: float
+) -> np.ndarray:
     """A fast, dependency-free feature: standardized log-magnitude spectrum."""
     f = np.asarray(view["freqs_hz"], dtype=np.float64)
     h = np.asarray(view["strain_fd"])
@@ -157,7 +163,7 @@ def _f_isco_gw_hz(m_total_solar: float) -> float:
     c = 299792458.0
     MSUN = 1.98847e30
     M = float(m_total_solar) * MSUN
-    return float(c**3 / (np.pi * (6.0 ** 1.5) * G * M))
+    return float(c**3 / (np.pi * (6.0**1.5) * G * M))
 
 
 def _chirp_gif_from_td(
@@ -222,7 +228,11 @@ def _chirp_gif_from_td(
 
     # Instantaneous frequency range
     f_good = np.isfinite(finst_seg) & (finst_seg > 0)
-    f95 = float(np.quantile(finst_seg[f_good], 0.95)) if np.any(f_good) else (f_ylim_hz or 1.0)
+    f95 = (
+        float(np.quantile(finst_seg[f_good], 0.95))
+        if np.any(f_good)
+        else (f_ylim_hz or 1.0)
+    )
     f_top = float(f_ylim_hz) if f_ylim_hz is not None else max(1e-6, 1.25 * f95)
 
     # Choose frame times
@@ -248,9 +258,12 @@ def _chirp_gif_from_td(
 
     if annotate:
         ax1.text(
-            0.01, 0.98, annotate,
+            0.01,
+            0.98,
+            annotate,
             transform=ax1.transAxes,
-            va="top", ha="left",
+            va="top",
+            ha="left",
             fontsize=9,
         )
 
@@ -273,15 +286,13 @@ def _chirp_gif_from_td(
         vline2.set_xdata([ti, ti])
         return (vline1, vline2)
 
-    anim = FuncAnimation(fig, update, frames=n_frames, interval=1000 / max(1, int(fps)), blit=False)
+    anim = FuncAnimation(
+        fig, update, frames=n_frames, interval=1000 / max(1, int(fps)), blit=False
+    )
     anim.save(str(out_path), writer=PillowWriter(fps=int(fps)))
     plt.close(fig)
 
     return {"t_peak_s": t_peak, "t0_s": t0, "t1_s": t1, "f_inst_p95_hz": float(f95)}
-
-
-from ..core.config import deep_update, load_config
-from .recipe_base import Recipe
 
 
 class GWSMBHVizRecipe(Recipe):
@@ -293,50 +304,140 @@ class GWSMBHVizRecipe(Recipe):
         self.add_common_args(p)
 
         # World (intrinsics)
-        p.add_argument("--n_events", type=int, default=8, help="Number of underlying mergers to sample (for PCA plot).")
-        p.add_argument("--event_index", type=int, default=0, help="Which sampled merger to visualize in detail.")
+        p.add_argument(
+            "--n_events",
+            type=int,
+            default=8,
+            help="Number of underlying mergers to sample (for PCA plot).",
+        )
+        p.add_argument(
+            "--event_index",
+            type=int,
+            default=0,
+            help="Which sampled merger to visualize in detail.",
+        )
         p.add_argument("--mchirp_min_solar", type=float, default=1e5)
         p.add_argument("--mchirp_max_solar", type=float, default=1e7)
         p.add_argument("--q_min", type=float, default=1.0)
         p.add_argument("--q_max", type=float, default=10.0)
-        p.add_argument("--spin_prior", type=str, default="isotropic", choices=["aligned_z", "isotropic"])
+        p.add_argument(
+            "--spin_prior",
+            type=str,
+            default="isotropic",
+            choices=["aligned_z", "isotropic"],
+        )
         p.add_argument("--approximant", type=str, default="IMRPhenomXPHM")
 
         # Symmetry sampling
-        p.add_argument("--k_views", type=int, default=8, help="How many symmetry views to draw for the chosen event.")
+        p.add_argument(
+            "--k_views",
+            type=int,
+            default=8,
+            help="How many symmetry views to draw for the chosen event.",
+        )
         p.add_argument("--delta_f_hz", type=float, default=1e-4)
         p.add_argument("--f_lower_hz", type=float, default=1e-4)
         p.add_argument("--f_upper_hz", type=float, default=0.1)
         p.add_argument("--distance_mpc_min", type=float, default=100.0)
         p.add_argument("--distance_mpc_max", type=float, default=50000.0)
-        p.add_argument("--add_noise", action="store_true", help="Add a noise realization in each view.")
-        p.add_argument("--no_noise", action="store_true", help="Force noise off (overrides --add_noise).")
+        p.add_argument(
+            "--add_noise",
+            action="store_true",
+            help="Add a noise realization in each view.",
+        )
+        p.add_argument(
+            "--no_noise",
+            action="store_true",
+            help="Force noise off (overrides --add_noise).",
+        )
         p.add_argument("--whiten", action="store_true")
         p.add_argument("--psd_path", type=str, default=None)
 
         # Visualization knobs
-        p.add_argument("--plot_fmin_hz", type=float, default=1e-4, help="Min frequency to plot/featurize.")
-        p.add_argument("--plot_fmax_hz", type=float, default=0.02, help="Max frequency to plot/featurize.")
-        p.add_argument("--plot_last_seconds", type=float, default=2000.0, help="Plot last N seconds before peak amplitude.")
+        p.add_argument(
+            "--plot_fmin_hz",
+            type=float,
+            default=1e-4,
+            help="Min frequency to plot/featurize.",
+        )
+        p.add_argument(
+            "--plot_fmax_hz",
+            type=float,
+            default=0.02,
+            help="Max frequency to plot/featurize.",
+        )
+        p.add_argument(
+            "--plot_last_seconds",
+            type=float,
+            default=2000.0,
+            help="Plot last N seconds before peak amplitude.",
+        )
 
         # For smoother TD plots, pad the FD series up to this Nyquist (Hz).
         p.add_argument("--td_pad_to_f_nyquist_hz", type=float, default=0.5)
 
         # Waveform-based GIF (recommended)
-        p.add_argument("--make_chirp_gif", action="store_true", help="Write chirp.gif based on the reconstructed strain.")
-        p.add_argument("--chirp_seconds", type=float, default=3000.0, help="How many seconds before peak to animate.")
-        p.add_argument("--chirp_window_seconds", type=float, default=600.0, help="Window length shown in the animation axes.")
+        p.add_argument(
+            "--make_chirp_gif",
+            action="store_true",
+            help="Write chirp.gif based on the reconstructed strain.",
+        )
+        p.add_argument(
+            "--chirp_seconds",
+            type=float,
+            default=3000.0,
+            help="How many seconds before peak to animate.",
+        )
+        p.add_argument(
+            "--chirp_window_seconds",
+            type=float,
+            default=600.0,
+            help="Window length shown in the animation axes.",
+        )
         p.add_argument("--chirp_fps", type=int, default=24)
         p.add_argument("--chirp_frames", type=int, default=240)
 
         # Synthetic psi4 VTK export (single view)
-        p.add_argument("--export_psi4_vtk", action="store_true", help="Write a synthetic psi4 VTK time series from the reference view.")
-        p.add_argument("--psi4_vtk_grid", type=int, default=96, help="Grid size per axis for VTK export.")
-        p.add_argument("--psi4_vtk_frames", type=int, default=60, help="Number of VTK frames to write.")
-        p.add_argument("--psi4_vtk_extent", type=float, default=0.0, help="Spatial extent (<=0 means auto from time window).")
-        p.add_argument("--psi4_vtk_c", type=float, default=1.0, help="Wave speed used for retarded-time propagation.")
-        p.add_argument("--psi4_vtk_no_norm", action="store_true", help="Disable normalization of the psi4 proxy.")
-        p.add_argument("--psi4_vtk_outdir", type=str, default=None, help="Output directory for VTK series (default: <out>/psi4_vtk).")
+        p.add_argument(
+            "--export_psi4_vtk",
+            action="store_true",
+            help="Write a synthetic psi4 VTK time series from the reference view.",
+        )
+        p.add_argument(
+            "--psi4_vtk_grid",
+            type=int,
+            default=96,
+            help="Grid size per axis for VTK export.",
+        )
+        p.add_argument(
+            "--psi4_vtk_frames",
+            type=int,
+            default=60,
+            help="Number of VTK frames to write.",
+        )
+        p.add_argument(
+            "--psi4_vtk_extent",
+            type=float,
+            default=0.0,
+            help="Spatial extent (<=0 means auto from time window).",
+        )
+        p.add_argument(
+            "--psi4_vtk_c",
+            type=float,
+            default=1.0,
+            help="Wave speed used for retarded-time propagation.",
+        )
+        p.add_argument(
+            "--psi4_vtk_no_norm",
+            action="store_true",
+            help="Disable normalization of the psi4 proxy.",
+        )
+        p.add_argument(
+            "--psi4_vtk_outdir",
+            type=str,
+            default=None,
+            help="Output directory for VTK series (default: <out>/psi4_vtk).",
+        )
 
         p.add_argument("--out_dir", type=str, default=str(self.out_dir))
 
@@ -355,7 +456,10 @@ class GWSMBHVizRecipe(Recipe):
 
         # --- Build world + symmetry ---
         from ..worlds.gw_merger_lal import GWMergerLALAdapter, GWMergerLALAdapterConfig
-        from ..symmetries.gw_observation_lal import GWObservationLALConfig, GWObservationLALSymmetry
+        from ..symmetries.gw_observation_lal import (
+            GWObservationLALConfig,
+            GWObservationLALSymmetry,
+        )
 
         n_events = int(max(1, args.n_events))
         wcfg = GWMergerLALAdapterConfig(
@@ -431,10 +535,14 @@ class GWSMBHVizRecipe(Recipe):
         plt.close(fig)
 
         # --- Time-domain reconstruction (band-limited), align by peak envelope ---
-        pad_nyq = float(args.td_pad_to_f_nyquist_hz) if args.td_pad_to_f_nyquist_hz else None
+        pad_nyq = (
+            float(args.td_pad_to_f_nyquist_hz) if args.td_pad_to_f_nyquist_hz else None
+        )
         td_traces: List[Tuple[np.ndarray, np.ndarray]] = []
         for v in views:
-            t, s, _dt = _fd_to_td_irfft_padded(v["freqs_hz"], v["strain_fd"], pad_to_f_nyquist_hz=pad_nyq)
+            t, s, _dt = _fd_to_td_irfft_padded(
+                v["freqs_hz"], v["strain_fd"], pad_to_f_nyquist_hz=pad_nyq
+            )
             td_traces.append((t, s))
 
         # Choose a reference "merger time" as the peak envelope of the first view
@@ -450,7 +558,7 @@ class GWSMBHVizRecipe(Recipe):
 
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(1, 1, 1)
-        for (t, s) in td_traces:
+        for t, s in td_traces:
             sel = (t >= t_start) & (t <= t_end)
             ax.plot(t[sel] - t_peak, s[sel], linewidth=1.0, alpha=0.9)
         ax.set_xlabel("Time (s) relative to peak amplitude")
@@ -463,7 +571,6 @@ class GWSMBHVizRecipe(Recipe):
         # --- Spectrogram for the first view (same aligned window) ---
         sel = (t_ref >= t_start) & (t_ref <= t_end)
         s_seg = s_ref[sel]
-        t_seg = t_ref[sel] - t_peak
 
         # Choose NFFT based on segment length
         n = int(s_seg.shape[0])
@@ -546,7 +653,11 @@ class GWSMBHVizRecipe(Recipe):
             t_vtk = t_ref[sel]
             s_vtk = s_ref[sel]
 
-            vtk_dir = Path(args.psi4_vtk_outdir) if args.psi4_vtk_outdir else (out_dir / "psi4_vtk")
+            vtk_dir = (
+                Path(args.psi4_vtk_outdir)
+                if args.psi4_vtk_outdir
+                else (out_dir / "psi4_vtk")
+            )
             cfg = Psi4VTKConfig(
                 grid=int(args.psi4_vtk_grid),
                 frames=int(args.psi4_vtk_frames),
@@ -555,16 +666,26 @@ class GWSMBHVizRecipe(Recipe):
                 prefix="psi4",
                 normalize=not bool(args.psi4_vtk_no_norm),
             )
-            psi4_vtk_meta = write_psi4_vtk_series(t=t_vtk, strain=s_vtk, out_dir=vtk_dir, cfg=cfg)
+            psi4_vtk_meta = write_psi4_vtk_series(
+                t=t_vtk, strain=s_vtk, out_dir=vtk_dir, cfg=cfg
+            )
             psi4_vtk_dir = str(vtk_dir)
 
         result = {
             "exp": self.NAME,
-            "world": {"adapter": "gw_merger_lal", "config": asdict(wcfg), "meta": data.get("meta", {})},
+            "world": {
+                "adapter": "gw_merger_lal",
+                "config": asdict(wcfg),
+                "meta": data.get("meta", {}),
+            },
             "symmetry": {"name": "gw_observation_lal", "config": asdict(ncfg)},
             "chosen_event_index": idx,
             "intrinsics": intr,
-            "derived": {"f_isco_gw_hz": f_isco, "f_upper_eff_hz": f_upper_eff, "chirp_meta": chirp_meta},
+            "derived": {
+                "f_isco_gw_hz": f_isco,
+                "f_upper_eff_hz": f_upper_eff,
+                "chirp_meta": chirp_meta,
+            },
             "artifacts": {
                 "event_intrinsics_json": str(out_dir / "event_intrinsics.json"),
                 "views_meta_jsonl": str(out_dir / "views_meta.jsonl"),

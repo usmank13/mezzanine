@@ -16,7 +16,6 @@ class MLPRegressorConfig:
 
 
 def _build_mlp(cfg: MLPRegressorConfig):
-    import torch
     import torch.nn as nn
 
     layers: list[nn.Module] = []
@@ -57,7 +56,6 @@ def train_regressor(
     Xtr = torch.tensor(X_train, dtype=torch.float32)
     ytr = torch.tensor(y_train, dtype=torch.float32)
     Xva = torch.tensor(X_val, dtype=torch.float32)
-    yva = torch.tensor(y_val, dtype=torch.float32)
 
     model = _build_mlp(cfg).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=float(lr), weight_decay=float(wd))
@@ -126,8 +124,6 @@ def train_regressor_distill(
     ysoft_tr = torch.tensor(y_soft_train, dtype=torch.float32)
     yhard_tr = torch.tensor(y_hard_train, dtype=torch.float32)
     Xva = torch.tensor(X_val, dtype=torch.float32)
-    ysoft_va = torch.tensor(y_soft_val, dtype=torch.float32)
-    yhard_va = torch.tensor(y_hard_val, dtype=torch.float32)
 
     model = _build_mlp(cfg).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=float(lr), weight_decay=float(wd))
@@ -304,7 +300,9 @@ def train_soft_regression_head(
         def forward(self, x: torch.Tensor) -> torch.Tensor:
             h = self.body(x) if self.body is not None else x
             y = self.out(h)
-            if bool(self.cfg.residual) and int(self.cfg.in_dim) == int(self.cfg.out_dim):
+            if bool(self.cfg.residual) and int(self.cfg.in_dim) == int(
+                self.cfg.out_dim
+            ):
                 return x + y
             return y
 
@@ -315,7 +313,12 @@ def train_soft_regression_head(
     dl = DataLoader(ds, batch_size=int(batch_size), shuffle=True, drop_last=True)
     if len(dl) == 0:
         # Avoid an empty loader when the dataset is tiny (e.g. in smoke tests).
-        dl = DataLoader(ds, batch_size=max(1, min(int(batch_size), len(ds))), shuffle=True, drop_last=False)
+        dl = DataLoader(
+            ds,
+            batch_size=max(1, min(int(batch_size), len(ds))),
+            shuffle=True,
+            drop_last=False,
+        )
 
     have_val = X_val is not None and Y_val is not None and len(X_val) > 0
     if have_val:
@@ -348,7 +351,9 @@ def train_soft_regression_head(
                 v = float(F.mse_loss(model(Xv), Yv).item())
             if v < best_val:
                 best_val = v
-                best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+                best_state = {
+                    k: v.detach().cpu().clone() for k, v in model.state_dict().items()
+                }
 
     if have_val:
         model.load_state_dict(best_state)
@@ -373,7 +378,9 @@ def predict_regression(
     outs: list[np.ndarray] = []
     with torch.no_grad():
         for i in range(0, int(X.shape[0]), int(chunk)):
-            xb = torch.from_numpy(X[i : i + int(chunk)]).to(device=device, dtype=torch.float32)
+            xb = torch.from_numpy(X[i : i + int(chunk)]).to(
+                device=device, dtype=torch.float32
+            )
             yb = model(xb).detach().cpu().numpy().astype(np.float32, copy=False)
             outs.append(yb)
     if not outs:

@@ -53,4 +53,3 @@ class EnsembleMemberSymmetry(Symmetry):
             idx = rng.choice(n, size=k, replace=False)
             return [int(i) for i in idx]
         return [int(rng.integers(0, n)) for _ in range(k)]
-

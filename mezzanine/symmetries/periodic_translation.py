@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -35,14 +35,23 @@ class PeriodicTranslationConfig:
 class PeriodicTranslationSymmetry(Symmetry):
     CONFIG_CLS = PeriodicTranslationConfig
     NAME = "periodic_translation"
-    DESCRIPTION = "Periodic translation of specified keys along spatial axes (stores _shifts)."
+    DESCRIPTION = (
+        "Periodic translation of specified keys along spatial axes (stores _shifts)."
+    )
 
     def __init__(self, config: PeriodicTranslationConfig):
         self.config = config
 
     def sample(self, x: Dict[str, Any], seed: int) -> Dict[str, Any]:
         rng = np.random.default_rng(int(seed))
-        shifts = [int(rng.integers(-int(self.config.max_shift), int(self.config.max_shift) + 1)) for _ in self.config.axes]
+        shifts = [
+            int(
+                rng.integers(
+                    -int(self.config.max_shift), int(self.config.max_shift) + 1
+                )
+            )
+            for _ in self.config.axes
+        ]
 
         out = dict(x)
         out["_shifts"] = shifts

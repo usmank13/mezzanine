@@ -1,14 +1,14 @@
-from __future__ import annotations
-
 """Audio folder world adapter.
 
 This adapter treats a folder of WAV files as a dataset. If label_from_subdir
 is True, the parent folder name is used as the class label.
 """
 
+from __future__ import annotations
+
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -49,7 +49,9 @@ class AudioFolderAdapterConfig:
 
 def _list_files(cfg: AudioFolderAdapterConfig) -> List[Path]:
     root = Path(cfg.audio_dir)
-    paths = list(root.rglob(cfg.pattern)) if cfg.recursive else list(root.glob(cfg.pattern))
+    paths = (
+        list(root.rglob(cfg.pattern)) if cfg.recursive else list(root.glob(cfg.pattern))
+    )
     files = [p for p in paths if p.is_file()]
     files.sort(key=lambda p: str(p).lower())
     return files
@@ -64,7 +66,9 @@ def _file_sig(p: Path) -> Dict[str, Any]:
     }
 
 
-@ADAPTERS.register("audio_folder", description="Load a folder of WAV tracks as a world.")
+@ADAPTERS.register(
+    "audio_folder", description="Load a folder of WAV tracks as a world."
+)
 class AudioFolderAdapter(WorldAdapter):
     NAME = "audio_folder"
     DESCRIPTION = "Audio folder adapter (WAV-first)."
@@ -86,7 +90,9 @@ class AudioFolderAdapter(WorldAdapter):
         names = sorted({p.parent.name for p in files})
         return {name: i for i, name in enumerate(names)}
 
-    def _load_item(self, p: Path, label_map: Optional[Dict[str, int]]) -> Dict[str, Any]:
+    def _load_item(
+        self, p: Path, label_map: Optional[Dict[str, int]]
+    ) -> Dict[str, Any]:
         cfg = self.cfg
         item: Dict[str, Any] = {
             "name": p.stem,

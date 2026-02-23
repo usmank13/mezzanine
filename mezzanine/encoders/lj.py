@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Encoders (frozen descriptors) for Lennard–Jones (LJ) configurations.
 
 These are **deterministic, physics-aligned** encoders intended for training
@@ -13,13 +11,16 @@ The encoders take as input examples shaped like:
 and return a float32 embedding array of shape [B, D].
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, List
 
 import numpy as np
 from scipy.spatial import cKDTree
 
 from ..core.cache import hash_dict
+from ..registry import ENCODERS
 from .base import Encoder
 
 
@@ -51,7 +52,9 @@ class LJFlattenEncoderConfig:
 
 class LJFlattenEncoder(Encoder):
     NAME = "lj_flatten"
-    DESCRIPTION = "Baseline: flatten particle coordinates (variant under SE(3)/permutation)."
+    DESCRIPTION = (
+        "Baseline: flatten particle coordinates (variant under SE(3)/permutation)."
+    )
 
     def __init__(self, cfg: LJFlattenEncoderConfig):
         if cfg.center not in ("none", "box", "mean"):
@@ -116,7 +119,9 @@ class LJRDFEncoder(Encoder):
         if cfg.r_max <= 0:
             raise ValueError("r_max must be > 0")
         self.cfg = cfg
-        self._edges = np.linspace(0.0, float(cfg.r_max), int(cfg.n_bins) + 1, dtype=np.float64)
+        self._edges = np.linspace(
+            0.0, float(cfg.r_max), int(cfg.n_bins) + 1, dtype=np.float64
+        )
         self._dr = float(self._edges[1] - self._edges[0])
 
     def fingerprint(self) -> str:
@@ -166,7 +171,9 @@ class LJRDFEncoder(Encoder):
 
         feat = feat.astype(np.float32)
         if self.cfg.include_log_rho:
-            feat = np.concatenate([feat, np.array([np.log(max(1e-12, rho))], dtype=np.float32)], axis=0)
+            feat = np.concatenate(
+                [feat, np.array([np.log(max(1e-12, rho))], dtype=np.float32)], axis=0
+            )
         return feat
 
     def encode(self, inputs: List[Any]) -> np.ndarray:
@@ -177,7 +184,5 @@ class LJRDFEncoder(Encoder):
 
 
 # Register
-from ..registry import ENCODERS
-
 ENCODERS.register("lj_flatten")(LJFlattenEncoder)
 ENCODERS.register("lj_rdf")(LJRDFEncoder)

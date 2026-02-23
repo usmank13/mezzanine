@@ -34,7 +34,9 @@ class UrbanSound8KAdapterConfig:
         if not csv_path.exists():
             raise ValueError(f"csv_path does not exist: {csv_path}")
         if not audio_root.exists() or not audio_root.is_dir():
-            raise ValueError(f"audio_root does not exist or is not a directory: {audio_root}")
+            raise ValueError(
+                f"audio_root does not exist or is not a directory: {audio_root}"
+            )
         if not (0.0 <= float(self.train_fraction) <= 1.0):
             raise ValueError("train_fraction must be within [0,1]")
         if self.sr <= 0:
@@ -64,7 +66,9 @@ def _parse_metadata(csv_path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-@ADAPTERS.register("urbansound8k", description="Load UrbanSound8K metadata + audio as a labeled world.")
+@ADAPTERS.register(
+    "urbansound8k", description="Load UrbanSound8K metadata + audio as a labeled world."
+)
 class UrbanSound8KAdapter(WorldAdapter):
     NAME = "urbansound8k"
     DESCRIPTION = "UrbanSound8K adapter (CSV + audio root)."
@@ -99,7 +103,9 @@ class UrbanSound8KAdapter(WorldAdapter):
         classes = sorted({str(r["class"]).strip() for r in rows})
         return {c: i for i, c in enumerate(classes)}
 
-    def _load_item(self, row: Dict[str, Any], label_map: Dict[str, int]) -> Dict[str, Any]:
+    def _load_item(
+        self, row: Dict[str, Any], label_map: Dict[str, int]
+    ) -> Dict[str, Any]:
         cfg = self.cfg
         path = Path(cfg.audio_root) / f"fold{int(row['fold'])}" / row["filename"]
         item: Dict[str, Any] = {

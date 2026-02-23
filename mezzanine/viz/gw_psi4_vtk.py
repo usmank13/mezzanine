@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 import numpy as np
 
@@ -37,7 +37,9 @@ def _auto_extent(t: np.ndarray) -> float:
     return float(max(1e-6, 0.25 * (t[-1] - t[0])))
 
 
-def _write_structured_points(path: Path, field: np.ndarray, *, origin: float, spacing: float) -> None:
+def _write_structured_points(
+    path: Path, field: np.ndarray, *, origin: float, spacing: float
+) -> None:
     nz, ny, nx = field.shape
     flat = field.ravel(order="C")
     with path.open("w") as f:
@@ -52,7 +54,7 @@ def _write_structured_points(path: Path, field: np.ndarray, *, origin: float, sp
         f.write("SCALARS psi4 float 1\n")
         f.write("LOOKUP_TABLE default\n")
         for i in range(0, flat.size, 6):
-            chunk = flat[i:i + 6]
+            chunk = flat[i : i + 6]
             f.write(" ".join(f"{v:.6e}" for v in chunk) + "\n")
 
 

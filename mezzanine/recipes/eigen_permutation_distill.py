@@ -23,11 +23,15 @@ def _view_seed(global_seed: int, i: int, j: int) -> int:
 
 
 def _featurize(xs: List[Dict[str, Any]]) -> np.ndarray:
-    return np.stack([np.asarray(ex["A"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
+    return np.stack(
+        [np.asarray(ex["A"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )
 
 
 def _targets(xs: List[Dict[str, Any]]) -> np.ndarray:
-    return np.stack([np.asarray(ex["eval"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
+    return np.stack(
+        [np.asarray(ex["eval"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )
 
 
 class EigenPermutationDistillRecipe(Recipe):
@@ -42,7 +46,14 @@ class EigenPermutationDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Data
-        p.add_argument("--dataset", "--data", dest="dataset", type=str, required=True, help="Path to eigen .npz")
+        p.add_argument(
+            "--dataset",
+            "--data",
+            dest="dataset",
+            type=str,
+            required=True,
+            help="Path to eigen .npz",
+        )
         p.add_argument("--n_train", type=int, default=50000)
         p.add_argument("--n_test", type=int, default=10000)
 
@@ -116,7 +127,9 @@ class EigenPermutationDistillRecipe(Recipe):
         yhat_test = predict(teacher, X_test, device=device)
         mse_test = float(np.mean((yhat_test - y_test) ** 2))
 
-        sym = NodePermutationSymmetry(NodePermutationConfig(key_A="A", key_b="b", key_x="x"))
+        sym = NodePermutationSymmetry(
+            NodePermutationConfig(key_A="A", key_b="b", key_x="x")
+        )
 
         # Teacher gap: eigenvalues should be invariant under permutation similarity
         preds_views: List[np.ndarray] = []
@@ -124,7 +137,10 @@ class EigenPermutationDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             preds_views.append(predict(teacher, _featurize(view), device=device))
         teacher_gap = warrant_gap_regression(np.stack(preds_views, axis=0))
 
@@ -134,7 +150,10 @@ class EigenPermutationDistillRecipe(Recipe):
             if j == 0:
                 view = train
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j)) for i, ex in enumerate(train)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j))
+                    for i, ex in enumerate(train)
+                ]
             preds_train_views.append(predict(teacher, _featurize(view), device=device))
         y_soft = np.stack(preds_train_views, axis=0).mean(axis=0)
 
@@ -163,8 +182,13 @@ class EigenPermutationDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
-            preds_student_views.append(predict(student, _featurize(view), device=device))
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
+            preds_student_views.append(
+                predict(student, _featurize(view), device=device)
+            )
         student_gap = warrant_gap_regression(np.stack(preds_student_views, axis=0))
 
         gap_improves = student_gap["gap_mse"] <= 0.8 * teacher_gap["gap_mse"]
@@ -179,8 +203,16 @@ class EigenPermutationDistillRecipe(Recipe):
                 "n_test": int(len(test)),
             },
             "symmetry": {"name": "node_permutation"},
-            "teacher": {"metrics": {**teacher_metrics, "mse_test": mse_test, **teacher_gap}},
-            "student": {"metrics": {**student_metrics, "mse_test": student_mse_test, **student_gap}},
+            "teacher": {
+                "metrics": {**teacher_metrics, "mse_test": mse_test, **teacher_gap}
+            },
+            "student": {
+                "metrics": {
+                    **student_metrics,
+                    "mse_test": student_mse_test,
+                    **student_gap,
+                }
+            },
             "distill": {"k_train": int(args.k_train), "k_test": int(args.k_test)},
             "make_break": {
                 "criterion": {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..registry import ENCODERS
 from .hf_vision import HFVisionEncoder, HFVisionEncoderConfig
 
 
@@ -20,5 +21,4 @@ class HFDINOv2Encoder(HFVisionEncoder):
 
 
 # Register
-from ..registry import ENCODERS
-ENCODERS.register('dinov2')( HFDINOv2Encoder )
+ENCODERS.register("dinov2")(HFDINOv2Encoder)

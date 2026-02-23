@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Audio distillation helpers used by audio recipes."""
+
+from __future__ import annotations
 
 from typing import Any, List
 

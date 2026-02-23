@@ -17,7 +17,10 @@ from ..pipelines.text_distill import (
     train_soft_label_head,
     warrant_gap_from_views,
 )
-from ..symmetries.market_bar_offset import MarketBarOffsetConfig, MarketBarOffsetSymmetry
+from ..symmetries.market_bar_offset import (
+    MarketBarOffsetConfig,
+    MarketBarOffsetSymmetry,
+)
 from ..viz.finance_distill import plot_finance_bar_offset_distill
 from ..worlds.finance_csv import FinanceCSVTapeAdapter, FinanceCSVTapeAdapterConfig
 from .recipe_base import Recipe
@@ -67,10 +70,19 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # CSV / adapter
-        p.add_argument("--path", type=str, required=True, help="Path to a CSV with at least a close column.")
+        p.add_argument(
+            "--path",
+            type=str,
+            required=True,
+            help="Path to a CSV with at least a close column.",
+        )
         p.add_argument("--close_col", type=str, default="close")
         p.add_argument("--timestamp_col", type=str, default="timestamp")
-        p.add_argument("--no_timestamp_col", action="store_true", help="If set, ignore timestamp_col even if present.")
+        p.add_argument(
+            "--no_timestamp_col",
+            action="store_true",
+            help="If set, ignore timestamp_col even if present.",
+        )
         p.add_argument("--symbol_col", type=str, default=None)
         p.add_argument("--symbol", type=str, default=None)
         p.add_argument("--delimiter", type=str, default=",")
@@ -89,9 +101,23 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         p.add_argument("--n_test", type=int, default=2000)
 
         # Symmetry
-        p.add_argument("--k_train", type=int, default=8, help="Number of bar-offset views for teacher expectation (includes canonical).")
-        p.add_argument("--k_test", type=int, default=16, help="Number of bar-offset views for evaluation (includes canonical).")
-        p.add_argument("--allow_positive", action="store_true", help="If set, bar offsets can be positive (may introduce lookahead).")
+        p.add_argument(
+            "--k_train",
+            type=int,
+            default=8,
+            help="Number of bar-offset views for teacher expectation (includes canonical).",
+        )
+        p.add_argument(
+            "--k_test",
+            type=int,
+            default=16,
+            help="Number of bar-offset views for evaluation (includes canonical).",
+        )
+        p.add_argument(
+            "--allow_positive",
+            action="store_true",
+            help="If set, bar offsets can be positive (may introduce lookahead).",
+        )
 
         # Head / optimization
         p.add_argument("--hidden", type=int, default=256)
@@ -106,7 +132,12 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         p.add_argument("--hard_label_weight", type=float, default=0.0)
 
         # Validation + make/break
-        p.add_argument("--val_frac", type=float, default=0.2, help="Fraction of training set used as validation (taken from the *end* of train).")
+        p.add_argument(
+            "--val_frac",
+            type=float,
+            default=0.2,
+            help="Fraction of training set used as validation (taken from the *end* of train).",
+        )
         p.add_argument("--min_tv_rel_improve", type=float, default=0.2)
         p.add_argument("--max_acc_drop", type=float, default=0.05)
 
@@ -121,7 +152,11 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         out_dir = ctx.out_dir
         device = _device()
 
-        timestamp_col = None if bool(args.no_timestamp_col) else str(args.timestamp_col or "").strip() or None
+        timestamp_col = (
+            None
+            if bool(args.no_timestamp_col)
+            else str(args.timestamp_col or "").strip() or None
+        )
 
         # --- Adapter ---
         adapter_cfg = FinanceCSVTapeAdapterConfig(
@@ -152,9 +187,13 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         test = world["test"]
         meta = world.get("meta", {})
 
-        Z_train = np.stack([np.asarray(ex["x"], dtype=np.float32) for ex in train], axis=0)
+        Z_train = np.stack(
+            [np.asarray(ex["x"], dtype=np.float32) for ex in train], axis=0
+        )
         y_train = np.asarray([int(ex["label"]) for ex in train], dtype=np.int64)
-        Z_test = np.stack([np.asarray(ex["x"], dtype=np.float32) for ex in test], axis=0)
+        Z_test = np.stack(
+            [np.asarray(ex["x"], dtype=np.float32) for ex in test], axis=0
+        )
         y_test = np.asarray([int(ex["label"]) for ex in test], dtype=np.int64)
 
         # --- Split train/val (time-like: val is last val_frac) ---
@@ -194,15 +233,29 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         base_acc = accuracy(P_base_test_canon, y_test)
 
         # --- Symmetry views ---
-        symmetry = MarketBarOffsetSymmetry(MarketBarOffsetConfig(max_offset=int(args.max_offset), allow_positive=bool(args.allow_positive)))
+        symmetry = MarketBarOffsetSymmetry(
+            MarketBarOffsetConfig(
+                max_offset=int(args.max_offset),
+                allow_positive=bool(args.allow_positive),
+            )
+        )
 
-        Z_test_views = build_feature_views(test, symmetry=symmetry, seed=int(args.seed) + 123, K=int(args.k_test))
-        P_base_views = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1)  # [N,K,C]
+        Z_test_views = build_feature_views(
+            test, symmetry=symmetry, seed=int(args.seed) + 123, K=int(args.k_test)
+        )
+        P_base_views = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )  # [N,K,C]
         gap_base = warrant_gap_from_views(P_base_views)
 
         # --- Teacher on train: average predictions across k_train views ---
-        Z_train_views = build_feature_views(train, symmetry=symmetry, seed=int(args.seed) + 999, K=int(args.k_train))
-        P_train_views = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_train_views], axis=1)
+        Z_train_views = build_feature_views(
+            train, symmetry=symmetry, seed=int(args.seed) + 999, K=int(args.k_train)
+        )
+        P_train_views = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_train_views],
+            axis=1,
+        )
         P_teacher = P_train_views.mean(axis=1).astype(np.float32, copy=False)
 
         # --- Student head: distill onto canonical features ---
@@ -225,7 +278,9 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         P_stud_test_canon = predict_proba(stud_head, Z_test, device=device)
         stud_acc = accuracy(P_stud_test_canon, y_test)
 
-        P_stud_views = np.stack([predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1)
+        P_stud_views = np.stack(
+            [predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )
         gap_stud = warrant_gap_from_views(P_stud_views)
 
         # --- Make/break ---
@@ -233,7 +288,14 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         stud_gap = float(gap_stud["mean_tv_to_mean"])
         tv_rel_improve = float((base_gap - stud_gap) / max(1e-9, base_gap))
         acc_drop = float(base_acc - stud_acc)
-        verdict = "MAKE ✅" if (tv_rel_improve >= float(args.min_tv_rel_improve) and acc_drop <= float(args.max_acc_drop)) else "BREAK / INCONCLUSIVE ❌"
+        verdict = (
+            "MAKE ✅"
+            if (
+                tv_rel_improve >= float(args.min_tv_rel_improve)
+                and acc_drop <= float(args.max_acc_drop)
+            )
+            else "BREAK / INCONCLUSIVE ❌"
+        )
 
         summary: Dict[str, Any] = {
             "exp": self.NAME,
@@ -287,4 +349,3 @@ class FinanceCSVBarOffsetDistillRecipe(Recipe):
         )
 
         return summary
-

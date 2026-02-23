@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Sequence
+from typing import Any, List, Sequence
 
 import numpy as np
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizerBase
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizerBase,
+)
 
 from ..core.cache import hash_dict
 from .base import Predictor
@@ -18,6 +23,7 @@ class HFCausalLMChoicePredictorConfig:
     This is a lightweight, *model-agnostic* way to turn a generative LM
     into a classifier for warrant-gap measurement.
     """
+
     model_name: str = "gpt2"
     batch_size: int = 4
     fp16: bool = True
@@ -54,7 +60,9 @@ class HFCausalLMChoicePredictor(Predictor):
             self.tok.pad_token = self.tok.eos_token
         self.tok.padding_side = cfg.padding_side
         if model is None:
-            self.model = AutoModelForCausalLM.from_pretrained(cfg.model_name).to(cfg.device)
+            self.model = AutoModelForCausalLM.from_pretrained(cfg.model_name).to(
+                cfg.device
+            )
         else:
             # Assume caller already placed the model on the desired device / device_map.
             self.model = model
@@ -88,7 +96,9 @@ class HFCausalLMChoicePredictor(Predictor):
         # Precompute choice token ids
         choice_ids: List[torch.Tensor] = []
         for c in choices:
-            ids = self.tok(c, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
+            ids = self.tok(c, add_special_tokens=False, return_tensors="pt")[
+                "input_ids"
+            ][0]
             choice_ids.append(ids.to(device))
 
         # We do *C* forward passes; for small C this is fine and very transparent.
@@ -96,9 +106,17 @@ class HFCausalLMChoicePredictor(Predictor):
             # Build extended sequences
             ids_rep = ids.unsqueeze(0).expand(B, -1)  # [B, Lc]
             ext = torch.cat([input_ids, ids_rep], dim=1)
-            ext_attn = torch.cat([attn, torch.ones((B, ids_rep.shape[1]), device=device, dtype=attn.dtype)], dim=1)
+            ext_attn = torch.cat(
+                [
+                    attn,
+                    torch.ones((B, ids_rep.shape[1]), device=device, dtype=attn.dtype),
+                ],
+                dim=1,
+            )
 
-            with torch.amp.autocast("cuda", enabled=(self.cfg.fp16 and device.startswith("cuda"))):
+            with torch.amp.autocast(
+                "cuda", enabled=(self.cfg.fp16 and device.startswith("cuda"))
+            ):
                 out = self.model(ext, attention_mask=ext_attn)
                 logits = out.logits  # [B, T, V]
 
@@ -112,9 +130,13 @@ class HFCausalLMChoicePredictor(Predictor):
             for k in range(ids.shape[0]):
                 pos = T0 + k - 1
                 # If k==0, pos=T0-1 uses last prompt token prediction
-                l = logits[:, pos, :]
+                logits_pos = logits[:, pos, :]
                 tok = ext[:, T0 + k]
-                lp = torch.log_softmax(l, dim=-1).gather(1, tok.unsqueeze(1)).squeeze(1)
+                lp = (
+                    torch.log_softmax(logits_pos, dim=-1)
+                    .gather(1, tok.unsqueeze(1))
+                    .squeeze(1)
+                )
                 logp = logp + lp
 
             scores[:, j] = logp.detach().cpu().float().numpy()
@@ -125,11 +147,14 @@ class HFCausalLMChoicePredictor(Predictor):
         prompts = list(inputs)
         choices = kwargs.get("choices", None)
         if choices is None:
-            raise ValueError("HFCausalLMChoicePredictor.predict_proba requires choices=[...]")
+            raise ValueError(
+                "HFCausalLMChoicePredictor.predict_proba requires choices=[...]"
+            )
         choices = list(choices)
         bs = int(self.cfg.batch_size)
         all_scores: List[np.ndarray] = []
         from tqdm import tqdm
+
         it = range(0, len(prompts), bs)
         for i in tqdm(it, desc="teacher batches", disable=not self.cfg.progress):
             chunk = prompts[i : i + bs]

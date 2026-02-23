@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 import numpy as np
 
@@ -30,14 +30,17 @@ def parse_tle_file(path: Path) -> Tuple[np.ndarray, np.ndarray]:
       - line1 + line2
     """
 
-    lines = [ln.rstrip("\n") for ln in path.read_text(encoding="utf-8", errors="ignore").splitlines() if ln.strip()]
+    lines = [
+        ln.rstrip("\n")
+        for ln in path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        if ln.strip()
+    ]
     out_e: List[float] = []
     out_M: List[float] = []
     i = 0
     while i < len(lines) - 1:
         # Find a line1 starting with '1 '
         if lines[i].startswith("1 "):
-            l1 = lines[i]
             l2 = lines[i + 1]
             i += 2
         else:
@@ -47,7 +50,6 @@ def parse_tle_file(path: Path) -> Tuple[np.ndarray, np.ndarray]:
             if not lines[i + 1].startswith("1 "):
                 i += 1
                 continue
-            l1 = lines[i + 1]
             l2 = lines[i + 2]
             i += 3
 
@@ -79,7 +81,9 @@ def parse_tle_file(path: Path) -> Tuple[np.ndarray, np.ndarray]:
     return np.array(out_e, dtype=np.float32), np.array(out_M, dtype=np.float32)
 
 
-def kepler_newton(M: np.ndarray, e: np.ndarray, *, max_iter: int = 50, tol: float = 1e-12) -> np.ndarray:
+def kepler_newton(
+    M: np.ndarray, e: np.ndarray, *, max_iter: int = 50, tol: float = 1e-12
+) -> np.ndarray:
     """Solve Kepler's equation for E given M and e (vectorized)."""
     M = np.asarray(M, dtype=np.float64)
     e = np.asarray(e, dtype=np.float64)
@@ -103,7 +107,9 @@ def main() -> None:
     ap.add_argument("--n_test", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=0)
 
-    ap.add_argument("--tle_file", type=str, default=None, help="Optional: path to a TLE file")
+    ap.add_argument(
+        "--tle_file", type=str, default=None, help="Optional: path to a TLE file"
+    )
     ap.add_argument("--min_e", type=float, default=0.0)
     ap.add_argument("--max_e", type=float, default=0.95)
 
@@ -120,11 +126,21 @@ def main() -> None:
         idx = rng.integers(0, len(e_all), size=n_total)
         e = e_all[idx]
         M = M_all[idx]
-        source = {"type": "tle", "path": str(args.tle_file), "n_unique": int(len(e_all))}
+        source = {
+            "type": "tle",
+            "path": str(args.tle_file),
+            "n_unique": int(len(e_all)),
+        }
     else:
-        e = rng.uniform(float(args.min_e), float(args.max_e), size=n_total).astype(np.float32)
+        e = rng.uniform(float(args.min_e), float(args.max_e), size=n_total).astype(
+            np.float32
+        )
         M = rng.uniform(0.0, 2.0 * np.pi, size=n_total).astype(np.float32)
-        source = {"type": "synthetic", "min_e": float(args.min_e), "max_e": float(args.max_e)}
+        source = {
+            "type": "synthetic",
+            "min_e": float(args.min_e),
+            "max_e": float(args.max_e),
+        }
 
     E = kepler_newton(M, e)
     y = np.stack([np.sin(E), np.cos(E)], axis=1).astype(np.float32)

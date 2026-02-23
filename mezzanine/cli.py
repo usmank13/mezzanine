@@ -67,10 +67,19 @@ def main_args(argv: list[str] | None = None) -> None:
     p_ln = sub.add_parser("list-symmetries", help="List registered symmetry families")
     p_ln.set_defaults(func=cmd_list_symmetries)
 
-    p_run = sub.add_parser("run", help="Run a recipe: mezzanine run <name> --out OUTDIR [recipe args...]")
+    p_run = sub.add_parser(
+        "run", help="Run a recipe: mezzanine run <name> --out OUTDIR [recipe args...]"
+    )
     p_run.add_argument("recipe", type=str, help="Recipe name (see `mezzanine list`).")
-    p_run.add_argument("--out", type=str, required=True, help="Output directory for artifacts/results.")
-    p_run.add_argument("--overrides", type=str, default=None, help="JSON dict of config overrides applied as defaults.")
+    p_run.add_argument(
+        "--out", type=str, required=True, help="Output directory for artifacts/results."
+    )
+    p_run.add_argument(
+        "--overrides",
+        type=str,
+        default=None,
+        help="JSON dict of config overrides applied as defaults.",
+    )
 
     # We intentionally pass-through all unknown args to the recipe.
     args, unknown = p.parse_known_args(argv)
@@ -82,6 +91,7 @@ def main_args(argv: list[str] | None = None) -> None:
 
 def main() -> None:
     import sys
+
     main_args(sys.argv[1:])
 
 

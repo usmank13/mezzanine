@@ -29,10 +29,7 @@ class MyRecipe(Recipe):
 
         args = p.parse_args(argv)
 
-        # Merge config defaults
-        file_cfg = {}  # load_config(args.config) if desired
-        cfg = {}       # deep_update(file_cfg, self.config) if desired
-
+        # Config defaults are already handled by Recipe.build_context() via --config + self.config.
         ctx = self.build_context(args)
 
         # TODO: implement experiment, save artifacts into ctx.out_dir

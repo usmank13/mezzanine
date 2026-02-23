@@ -14,4 +14,3 @@ def test_recipe_registry_includes_neuralgcm() -> None:
     from mezzanine.recipes.registry import list_recipes
 
     assert "neuralgcm_ens_warrant_distill" in list_recipes()
-

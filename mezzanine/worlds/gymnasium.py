@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 
 from ..core.cache import hash_dict
 from ..core.deterministic import seed_everything
+from ..registry import ADAPTERS
 from .base import WorldAdapter
 
 
@@ -28,6 +29,7 @@ class GymnasiumAdapter(WorldAdapter):
 
     Note: requires gymnasium installed and the env to support rgb_array rendering.
     """
+
     NAME = "gymnasium"
     DESCRIPTION = "Gymnasium environment adapter (trajectories as worlds)."
 
@@ -63,21 +65,38 @@ class GymnasiumAdapter(WorldAdapter):
             rew_list.append(float(r))
             if done:
                 break
-        return {"obs": obs_list, "actions": act_list, "rewards": rew_list, "frames": frames}
+        return {
+            "obs": obs_list,
+            "actions": act_list,
+            "rewards": rew_list,
+            "frames": frames,
+        }
 
     def load(self) -> Dict[str, Any]:
         try:
             import gymnasium as gym  # type: ignore
         except Exception as e:
-            raise RuntimeError("Gymnasium adapter requires gymnasium. Install: pip install mezzanine[gym]") from e
+            raise RuntimeError(
+                "Gymnasium adapter requires gymnasium. Install: pip install mezzanine[gym]"
+            ) from e
 
         seed_everything(self.cfg.seed)
         render_mode = "rgb_array" if self.cfg.render_rgb else None
         env = gym.make(self.cfg.env_id, render_mode=render_mode)
 
-        train = [self._rollout(env, self.cfg.max_steps, self.cfg.seed + i) for i in range(self.cfg.n_train_episodes)]
-        test = [self._rollout(env, self.cfg.max_steps, self.cfg.seed + 1000 + i) for i in range(self.cfg.n_test_episodes)]
-        meta = {"env_id": self.cfg.env_id, "seed": self.cfg.seed, "max_steps": self.cfg.max_steps}
+        train = [
+            self._rollout(env, self.cfg.max_steps, self.cfg.seed + i)
+            for i in range(self.cfg.n_train_episodes)
+        ]
+        test = [
+            self._rollout(env, self.cfg.max_steps, self.cfg.seed + 1000 + i)
+            for i in range(self.cfg.n_test_episodes)
+        ]
+        meta = {
+            "env_id": self.cfg.env_id,
+            "seed": self.cfg.seed,
+            "max_steps": self.cfg.max_steps,
+        }
         try:
             env.close()
         except Exception:
@@ -86,5 +105,4 @@ class GymnasiumAdapter(WorldAdapter):
 
 
 # Register
-from ..registry import ADAPTERS
 ADAPTERS.register("gymnasium")(GymnasiumAdapter)

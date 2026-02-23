@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
 
 
@@ -161,14 +162,23 @@ class QGCoordNoiseSymmetry(Symmetry):
 
         # pt noise is applied multiplicatively to preserve scale
         if float(self.cfg.sigma_pt_frac) > 0:
-            eps = rng.normal(0.0, float(self.cfg.sigma_pt_frac), size=outP[mask, 0].shape).astype(np.float32)
+            eps = rng.normal(
+                0.0, float(self.cfg.sigma_pt_frac), size=outP[mask, 0].shape
+            ).astype(np.float32)
             outP[mask, 0] = np.maximum(0.0, outP[mask, 0] * (1.0 + eps))
 
         if float(self.cfg.sigma_y) > 0:
-            outP[mask, 1] = outP[mask, 1] + rng.normal(0.0, float(self.cfg.sigma_y), size=outP[mask, 1].shape).astype(np.float32)
+            outP[mask, 1] = outP[mask, 1] + rng.normal(
+                0.0, float(self.cfg.sigma_y), size=outP[mask, 1].shape
+            ).astype(np.float32)
 
         if float(self.cfg.sigma_phi) > 0:
-            outP[mask, 2] = _wrap_phi(outP[mask, 2] + rng.normal(0.0, float(self.cfg.sigma_phi), size=outP[mask, 2].shape).astype(np.float32))
+            outP[mask, 2] = _wrap_phi(
+                outP[mask, 2]
+                + rng.normal(
+                    0.0, float(self.cfg.sigma_phi), size=outP[mask, 2].shape
+                ).astype(np.float32)
+            )
 
         out = dict(x)
         out["particles"] = outP
@@ -176,8 +186,6 @@ class QGCoordNoiseSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-
 SYMMETRIES.register("qg_permutation")(QGPermutationSymmetry)
 SYMMETRIES.register("qg_so2_rotate")(QGSO2RotateSymmetry)
 SYMMETRIES.register("qg_reflection")(QGReflectionSymmetry)

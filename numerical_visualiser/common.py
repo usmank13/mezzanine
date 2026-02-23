@@ -29,7 +29,9 @@ def fmt_metric(x: float, *, digits: int = 3) -> str:
     return f"{v:.{digits}e}"
 
 
-def footer_from_results(results: dict[str, Any], *, prefix: str = "Run snapshot") -> str:
+def footer_from_results(
+    results: dict[str, Any], *, prefix: str = "Run snapshot"
+) -> str:
     teacher_gap = float(results["teacher"]["metrics"].get("gap_mse", float("nan")))
     student_gap = float(results["student"]["metrics"].get("gap_mse", float("nan")))
     verdict = str(results["make_break"]["verdict"])
@@ -56,7 +58,9 @@ def fig_to_image(fig) -> Image.Image:
     raise RuntimeError("Unsupported matplotlib canvas: cannot extract pixels")
 
 
-def quantize_frames(frames_rgb: list[Image.Image], *, colors: int = 256) -> list[Image.Image]:
+def quantize_frames(
+    frames_rgb: list[Image.Image], *, colors: int = 256
+) -> list[Image.Image]:
     if not frames_rgb:
         return []
     pal = frames_rgb[0].convert("P", palette=Image.ADAPTIVE, colors=int(colors))

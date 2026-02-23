@@ -34,7 +34,9 @@ class Esc50AdapterConfig:
         if not csv_path.exists():
             raise ValueError(f"csv_path does not exist: {csv_path}")
         if not audio_dir.exists() or not audio_dir.is_dir():
-            raise ValueError(f"audio_dir does not exist or is not a directory: {audio_dir}")
+            raise ValueError(
+                f"audio_dir does not exist or is not a directory: {audio_dir}"
+            )
         if not (0.0 <= float(self.train_fraction) <= 1.0):
             raise ValueError("train_fraction must be within [0,1]")
         if self.sr <= 0:
@@ -64,7 +66,9 @@ def _parse_metadata(csv_path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-@ADAPTERS.register("esc50", description="Load ESC-50 metadata + audio as a labeled world.")
+@ADAPTERS.register(
+    "esc50", description="Load ESC-50 metadata + audio as a labeled world."
+)
 class Esc50Adapter(WorldAdapter):
     NAME = "esc50"
     DESCRIPTION = "ESC-50 adapter (CSV + audio dir)."
@@ -99,7 +103,9 @@ class Esc50Adapter(WorldAdapter):
         cats = sorted({str(r["category"]).strip() for r in rows})
         return {c: i for i, c in enumerate(cats)}
 
-    def _load_item(self, row: Dict[str, Any], label_map: Dict[str, int]) -> Dict[str, Any]:
+    def _load_item(
+        self, row: Dict[str, Any], label_map: Dict[str, int]
+    ) -> Dict[str, Any]:
         cfg = self.cfg
         path = Path(cfg.audio_dir) / row["filename"]
         item: Dict[str, Any] = {
@@ -107,7 +113,10 @@ class Esc50Adapter(WorldAdapter):
             "path": str(path.resolve()),
             "sr": int(cfg.sr),
             "label": int(label_map[str(row["category"]).strip()]),
-            "meta": {"fold": int(row["fold"]), "category": str(row["category"]).strip()},
+            "meta": {
+                "fold": int(row["fold"]),
+                "category": str(row["category"]).strip(),
+            },
         }
         if cfg.include_audio:
             audio, orig_sr = load_audio(

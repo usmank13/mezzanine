@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Utilities for working with LeRobot-format datasets.
 
 LeRobot datasets on HuggingFace can appear in (at least) two common shapes:
@@ -10,6 +8,8 @@ LeRobot datasets on HuggingFace can appear in (at least) two common shapes:
 
 These helpers try to be robust across both layouts while staying lightweight.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -281,21 +281,12 @@ def build_pairs(
             if frames is None or actions is None:
                 continue
 
-            # Normalize to python sequences.
-            if isinstance(frames, np.ndarray):
-                # frames: [T,H,W,C]
-                T = int(frames.shape[0])
-                frame_get = lambda t: frames[t]
-            else:
-                T = len(frames)
-                frame_get = lambda t: frames[t]
-
-            if isinstance(actions, np.ndarray):
-                Ta = int(actions.shape[0])
-                action_get = lambda t: actions[t]
-            else:
-                Ta = len(actions)
-                action_get = lambda t: actions[t]
+            T = int(frames.shape[0]) if isinstance(frames, np.ndarray) else len(frames)
+            Ta = (
+                int(actions.shape[0])
+                if isinstance(actions, np.ndarray)
+                else len(actions)
+            )
 
             T_eff = min(T, Ta)
             if T_eff <= delta_steps:
@@ -306,9 +297,9 @@ def build_pairs(
             for _ in range(n_samp):
                 t = int(rng.integers(0, T_eff - delta_steps))
                 try:
-                    img_t = _to_uint8_rgb_array(frame_get(t))
-                    img_tp = _to_uint8_rgb_array(frame_get(t + delta_steps))
-                    a = _to_float_action(action_get(t))
+                    img_t = _to_uint8_rgb_array(frames[t])
+                    img_tp = _to_uint8_rgb_array(frames[t + delta_steps])
+                    a = _to_float_action(actions[t])
                 except Exception:
                     continue
                 out.append({"img_t": img_t, "img_tp": img_tp, "action_feat": a})
@@ -335,7 +326,9 @@ def build_pairs(
         if episode_key is not None:
             try:
                 # episode_key can be flat or nested depending on dataset formatting.
-                if get_by_dotted_key(ex_i, episode_key) != get_by_dotted_key(ex_j, episode_key):
+                if get_by_dotted_key(ex_i, episode_key) != get_by_dotted_key(
+                    ex_j, episode_key
+                ):
                     continue
             except Exception:
                 # If episode_key access fails, fall back to trusting the dataset.

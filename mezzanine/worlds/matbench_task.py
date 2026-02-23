@@ -107,12 +107,18 @@ class MatbenchTaskAdapter(WorldAdapter):
 
     def get_train_examples(self) -> List[Dict[str, Any]]:
         X, y = self.task.get_train_and_val_data(int(self.config.fold), as_type="tuple")
-        X_s, y_s = self._subsample_pairs(X, y, int(self.config.n_train), int(self.config.seed))
+        X_s, y_s = self._subsample_pairs(
+            X, y, int(self.config.n_train), int(self.config.seed)
+        )
         return [{"X": X_s[i], "y": y_s[i]} for i in range(len(X_s))]
 
     def get_test_examples(self) -> List[Dict[str, Any]]:
-        X, y = self.task.get_test_data(int(self.config.fold), as_type="tuple", include_target=True)
-        X_s, y_s = self._subsample_pairs(X, y, int(self.config.n_test), int(self.config.seed) + 1)
+        X, y = self.task.get_test_data(
+            int(self.config.fold), as_type="tuple", include_target=True
+        )
+        X_s, y_s = self._subsample_pairs(
+            X, y, int(self.config.n_test), int(self.config.seed) + 1
+        )
         return [{"X": X_s[i], "y": y_s[i]} for i in range(len(X_s))]
 
     def load(self) -> Dict[str, Any]:
@@ -126,4 +132,3 @@ class MatbenchTaskAdapter(WorldAdapter):
             "n_test": int(len(test)),
         }
         return {"train": train, "test": test, "meta": meta}
-

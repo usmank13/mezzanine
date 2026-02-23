@@ -21,16 +21,40 @@ def _write_tiny_neuralgcm_zarr(tmp_path: Path):
     deltas = np.array([np.timedelta64(6, "h"), np.timedelta64(24, "h")])
     rng = np.random.default_rng(0)
 
-    members_temperature = rng.standard_normal((R, T, L, Lev, Lon, Lat)).astype(np.float32)
-    members_geopotential = rng.standard_normal((R, T, L, Lev, Lon, Lat)).astype(np.float32)
+    members_temperature = rng.standard_normal((R, T, L, Lev, Lon, Lat)).astype(
+        np.float32
+    )
+    members_geopotential = rng.standard_normal((R, T, L, Lev, Lon, Lat)).astype(
+        np.float32
+    )
 
     mean_temperature = members_temperature.mean(axis=0).astype(np.float32)
     mean_geopotential = members_geopotential.mean(axis=0).astype(np.float32)
 
     members = xr.Dataset(
         data_vars={
-            "temperature": (("realization", "time", "prediction_timedelta", "level", "longitude", "latitude"), members_temperature),
-            "geopotential": (("realization", "time", "prediction_timedelta", "level", "longitude", "latitude"), members_geopotential),
+            "temperature": (
+                (
+                    "realization",
+                    "time",
+                    "prediction_timedelta",
+                    "level",
+                    "longitude",
+                    "latitude",
+                ),
+                members_temperature,
+            ),
+            "geopotential": (
+                (
+                    "realization",
+                    "time",
+                    "prediction_timedelta",
+                    "level",
+                    "longitude",
+                    "latitude",
+                ),
+                members_geopotential,
+            ),
         },
         coords={
             "realization": np.arange(R, dtype=np.int64),
@@ -43,8 +67,14 @@ def _write_tiny_neuralgcm_zarr(tmp_path: Path):
     )
     mean = xr.Dataset(
         data_vars={
-            "temperature": (("time", "prediction_timedelta", "level", "longitude", "latitude"), mean_temperature),
-            "geopotential": (("time", "prediction_timedelta", "level", "longitude", "latitude"), mean_geopotential),
+            "temperature": (
+                ("time", "prediction_timedelta", "level", "longitude", "latitude"),
+                mean_temperature,
+            ),
+            "geopotential": (
+                ("time", "prediction_timedelta", "level", "longitude", "latitude"),
+                mean_geopotential,
+            ),
         },
         coords={
             "time": np.arange(T, dtype=np.int64),
@@ -65,7 +95,9 @@ def _write_tiny_neuralgcm_zarr(tmp_path: Path):
 def test_neuralgcm_ens_warrant_distill_smoke(tmp_path: Path) -> None:
     members_path, mean_path = _write_tiny_neuralgcm_zarr(tmp_path)
 
-    from mezzanine.recipes.neuralgcm_ens_warrant_distill import NeuralGCMEnsWarrantDistillRecipe
+    from mezzanine.recipes.neuralgcm_ens_warrant_distill import (
+        NeuralGCMEnsWarrantDistillRecipe,
+    )
 
     out_dir = tmp_path / "out"
     recipe = NeuralGCMEnsWarrantDistillRecipe(out_dir=out_dir, config={})
@@ -115,4 +147,3 @@ def test_neuralgcm_ens_warrant_distill_smoke(tmp_path: Path) -> None:
     assert loaded["exp"] == "neuralgcm_ens_warrant_distill"
     assert "make_break" in loaded
     assert res["exp"] == "neuralgcm_ens_warrant_distill"
-

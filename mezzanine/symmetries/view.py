@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Tuple
 
 import numpy as np
 from PIL import Image
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
 
 
@@ -17,6 +17,7 @@ class ViewSymmetryConfig:
 
 class ViewSymmetry(Symmetry):
     """Simple vision symmetry: random crop + optional horizontal flip."""
+
     NAME = "view"
     DESCRIPTION = "Random crop + optional horizontal flip (vision view symmetry)."
 
@@ -40,5 +41,4 @@ class ViewSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-SYMMETRIES.register('view')( ViewSymmetry )
+SYMMETRIES.register("view")(ViewSymmetry)

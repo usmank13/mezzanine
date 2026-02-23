@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Public API helpers.
 
 Recipes are the reproducible entrypoint, but many users want a simple function call
@@ -7,6 +5,8 @@ to measure a warrant gap (instability under symmetries) on their own data.
 
 The functions here are intentionally minimal and composable.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence
@@ -22,6 +22,7 @@ from .pipelines.text_distill import warrant_gap_from_views
 @dataclass
 class MeasureResult:
     """Returned by `measure(...)`. Stored as JSON via `asdict()` if needed."""
+
     n: int
     k: int
     mode: str  # "embedding" or "prediction"
@@ -81,7 +82,13 @@ def measure(
     for j in range(k):
         tag_j = f"{tag}_view{j}"
         if cache is not None:
-            key = cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split=split, tag=tag_j, extra={"k": k, "seed": seed})
+            key = cache.make_key(
+                world_fingerprint=world_fp,
+                encoder_fingerprint=enc_fp,
+                split=split,
+                tag=tag_j,
+                extra={"k": k, "seed": seed},
+            )
             got = cache.get(key)
             if got is not None:
                 Zj, _meta = got
@@ -104,6 +111,8 @@ def measure(
     # Prediction instability metrics
     # Predictor consumes raw inputs by default; but many predictors will use encoder internally.
     # Here we assume predictor can score each view directly.
-    P_views = np.stack([predictor.predict_proba(views[j]) for j in range(k)], axis=1)  # [N,K,C]
+    P_views = np.stack(
+        [predictor.predict_proba(views[j]) for j in range(k)], axis=1
+    )  # [N,K,C]
     gap = warrant_gap_from_views(P_views)
     return MeasureResult(n=N, k=k, mode="prediction", metrics=gap)

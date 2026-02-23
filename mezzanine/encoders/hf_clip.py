@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
-import numpy as np
+from ..registry import ENCODERS
 
 from .hf_vision import HFVisionEncoder, HFVisionEncoderConfig
-from .base import Encoder
 
 
 @dataclass
@@ -29,5 +27,4 @@ class HFCLIPVisionEncoder(HFVisionEncoder):
 
 
 # Register
-from ..registry import ENCODERS
-ENCODERS.register('clip_vision')( HFCLIPVisionEncoder )
+ENCODERS.register("clip_vision")(HFCLIPVisionEncoder)

@@ -53,7 +53,9 @@ class FieldCodecSymmetry(Symmetry):
         if clip > 0:
             y = np.clip(y, -clip, clip)
 
-        if float(self.cfg.fp16_prob) > 0 and float(rng.random()) < float(self.cfg.fp16_prob):
+        if float(self.cfg.fp16_prob) > 0 and float(rng.random()) < float(
+            self.cfg.fp16_prob
+        ):
             y = y.astype(np.float16).astype(np.float32)
 
         b0 = int(min(self.cfg.quant_bits_min, self.cfg.quant_bits_max))
@@ -79,4 +81,3 @@ class FieldCodecSymmetry(Symmetry):
             out["field"] = y
             return out
         return y
-

@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from ..utils.market_features import ReturnContextConfig, x_from_context
 from .base import Symmetry
 
@@ -32,13 +33,13 @@ class MarketBarOffsetSymmetry(Symmetry):
 
     def sample(self, x: Dict[str, Any], *, seed: int) -> Dict[str, Any]:
         rng = np.random.default_rng(int(seed))
-        O = int(self.cfg.max_offset)
-        if O <= 0:
+        max_offset = int(self.cfg.max_offset)
+        if max_offset <= 0:
             off = 0
         elif bool(self.cfg.allow_positive):
-            off = int(rng.integers(-O, O + 1))
+            off = int(rng.integers(-max_offset, max_offset + 1))
         else:
-            off = int(rng.integers(-O, 1))  # [-O, 0]
+            off = int(rng.integers(-max_offset, 1))  # [-max_offset, 0]
 
         r_context = np.asarray(x["r_context"], dtype=np.float32)
         trend = float(x.get("trend", 0.0))
@@ -50,7 +51,4 @@ class MarketBarOffsetSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-
 SYMMETRIES.register("market_bar_offset")(MarketBarOffsetSymmetry)
-

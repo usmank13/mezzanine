@@ -3,11 +3,12 @@ from __future__ import annotations
 import csv
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 import numpy as np
 
 from ..core.cache import hash_dict
+from ..registry import ADAPTERS
 from ..utils.market_features import ReturnContextConfig, x_from_context
 from .base import WorldAdapter
 
@@ -60,11 +61,15 @@ class FinanceCSVTapeAdapterConfig:
     seed: int = 0  # kept for fingerprinting / reproducibility
 
 
-def _find_col(name_to_idx: Dict[str, int], want: Optional[str], *, kind: str) -> Optional[int]:
+def _find_col(
+    name_to_idx: Dict[str, int], want: Optional[str], *, kind: str
+) -> Optional[int]:
     if want is None:
         return None
     if want not in name_to_idx:
-        raise KeyError(f"Missing {kind} column {want!r}. Available: {sorted(name_to_idx.keys())}")
+        raise KeyError(
+            f"Missing {kind} column {want!r}. Available: {sorted(name_to_idx.keys())}"
+        )
     return int(name_to_idx[want])
 
 
@@ -95,7 +100,9 @@ def _parse_rows(
             try:
                 idx_close = int(close_col)
             except Exception as e:
-                raise ValueError("has_header=false requires close_col to be an integer column index") from e
+                raise ValueError(
+                    "has_header=false requires close_col to be an integer column index"
+                ) from e
             idx_ts = int(timestamp_col) if timestamp_col is not None else None
             idx_sym = int(symbol_col) if symbol_col is not None else None
         else:
@@ -172,7 +179,9 @@ def _compute_returns(close: np.ndarray, *, return_type: str) -> np.ndarray:
     elif str(return_type) == "pct":
         r = (close[1:] - close[:-1]) / np.clip(close[:-1], 1e-12, None)
     else:
-        raise ValueError(f"Unknown return_type={return_type!r} (expected 'log' or 'pct').")
+        raise ValueError(
+            f"Unknown return_type={return_type!r} (expected 'log' or 'pct')."
+        )
     return r.astype(np.float32, copy=False)
 
 
@@ -206,41 +215,49 @@ class FinanceCSVTapeAdapter(WorldAdapter):
         r = _compute_returns(close, return_type=str(self.cfg.return_type))
 
         L = int(self.cfg.lookback)
-        O = int(self.cfg.max_offset)
+        max_offset = int(self.cfg.max_offset)
         H = int(self.cfg.label_horizon)
         stride = max(1, int(self.cfg.stride))
         gap = max(0, int(self.cfg.gap))
 
         if L <= 1:
             raise ValueError("lookback must be >= 2")
-        if O < 0:
+        if max_offset < 0:
             raise ValueError("max_offset must be >= 0")
         if H <= 0:
             raise ValueError("label_horizon must be >= 1")
 
         # Anchor i is a return index. We predict r[i+H] from window ending at r[i].
-        i_min = (L - 1) + O
-        i_max = (r.shape[0] - 1 - H) - O
+        i_min = (L - 1) + max_offset
+        i_max = (r.shape[0] - 1 - H) - max_offset
         if i_max < i_min:
-            raise ValueError("Not enough data for requested lookback/max_offset/label_horizon.")
+            raise ValueError(
+                "Not enough data for requested lookback/max_offset/label_horizon."
+            )
 
         anchors = np.arange(i_min, i_max + 1, stride, dtype=np.int64)
         need = int(self.cfg.n_train) + gap + int(self.cfg.n_test)
         if anchors.shape[0] < need:
-            raise ValueError(f"Not enough anchors ({anchors.shape[0]}) for n_train+gap+n_test={need}.")
+            raise ValueError(
+                f"Not enough anchors ({anchors.shape[0]}) for n_train+gap+n_test={need}."
+            )
 
         train_anchors = anchors[: int(self.cfg.n_train)]
-        test_anchors = anchors[int(self.cfg.n_train) + gap : int(self.cfg.n_train) + gap + int(self.cfg.n_test)]
+        test_anchors = anchors[
+            int(self.cfg.n_train) + gap : int(self.cfg.n_train)
+            + gap
+            + int(self.cfg.n_test)
+        ]
 
         trend_L = max(2, int(self.cfg.trend_lookback))
-        ctx_cfg = ReturnContextConfig(max_offset=O)
+        ctx_cfg = ReturnContextConfig(max_offset=max_offset)
 
         def _make_example(i: int) -> Dict[str, Any]:
-            # r_context covers r[i-(L-1)-O ... i+O] inclusive
-            start = i - (L - 1) - O
-            end = i + O
+            # r_context covers r[i-(L-1)-max_offset ... i+max_offset] inclusive
+            start = i - (L - 1) - max_offset
+            end = i + max_offset
             r_context = r[start : end + 1].astype(np.float32, copy=False)
-            if r_context.shape[0] != L + 2 * O:
+            if r_context.shape[0] != L + 2 * max_offset:
                 raise AssertionError("bad r_context length")
             # Slow trend feature from a longer trailing window (stable under small offsets).
             t_start = max(0, i - (trend_L - 1))
@@ -272,7 +289,7 @@ class FinanceCSVTapeAdapter(WorldAdapter):
             "n_rows": int(close.shape[0]),
             "return_type": str(self.cfg.return_type),
             "lookback": L,
-            "max_offset": O,
+            "max_offset": max_offset,
             "trend_lookback": trend_L,
             "label_horizon": H,
             "stride": stride,
@@ -291,6 +308,4 @@ class FinanceCSVTapeAdapter(WorldAdapter):
 
 
 # Register
-from ..registry import ADAPTERS
-
 ADAPTERS.register("finance_csv")(FinanceCSVTapeAdapter)

@@ -13,7 +13,10 @@ from ..pipelines.regression_distill import (
     train_regressor_distill,
     warrant_gap_regression,
 )
-from ..symmetries.periodic_translation import PeriodicTranslationConfig, PeriodicTranslationSymmetry
+from ..symmetries.periodic_translation import (
+    PeriodicTranslationConfig,
+    PeriodicTranslationSymmetry,
+)
 from ..worlds.pdebench_h5 import PDEBenchH5Adapter, PDEBenchH5AdapterConfig
 from .recipe_base import Recipe
 
@@ -48,7 +51,9 @@ def _parse_group_key(path: str, *, default_group: str) -> tuple[str, str]:
     return group, key
 
 
-def _apply_legacy_u0_u1_keys(args: argparse.Namespace, p: argparse.ArgumentParser) -> None:
+def _apply_legacy_u0_u1_keys(
+    args: argparse.Namespace, p: argparse.ArgumentParser
+) -> None:
     """Map legacy flags (--train_u0_key, etc.) onto (train_group/test_group, x_key/y_key)."""
 
     train_u0 = getattr(args, "train_u0_key", None)
@@ -56,7 +61,9 @@ def _apply_legacy_u0_u1_keys(args: argparse.Namespace, p: argparse.ArgumentParse
     test_u0 = getattr(args, "test_u0_key", None)
     test_u1 = getattr(args, "test_u1_key", None)
 
-    any_legacy = any(v not in (None, "", "None") for v in (train_u0, train_u1, test_u0, test_u1))
+    any_legacy = any(
+        v not in (None, "", "None") for v in (train_u0, train_u1, test_u0, test_u1)
+    )
     if not any_legacy:
         return
 
@@ -68,15 +75,27 @@ def _apply_legacy_u0_u1_keys(args: argparse.Namespace, p: argparse.ArgumentParse
     if args.x_key not in (None, "", "None") or args.y_key not in (None, "", "None"):
         p.error("Do not mix legacy --{train,test}_u{0,1}_key with --x_key/--y_key.")
 
-    train_group0, x_key_train = _parse_group_key(str(train_u0), default_group=str(args.train_group))
-    train_group1, y_key_train = _parse_group_key(str(train_u1), default_group=str(args.train_group))
+    train_group0, x_key_train = _parse_group_key(
+        str(train_u0), default_group=str(args.train_group)
+    )
+    train_group1, y_key_train = _parse_group_key(
+        str(train_u1), default_group=str(args.train_group)
+    )
     if train_group0 != train_group1:
-        p.error(f"train_u0_key and train_u1_key must share a group (got {train_group0!r} vs {train_group1!r}).")
+        p.error(
+            f"train_u0_key and train_u1_key must share a group (got {train_group0!r} vs {train_group1!r})."
+        )
 
-    test_group0, x_key_test = _parse_group_key(str(test_u0), default_group=str(args.test_group))
-    test_group1, y_key_test = _parse_group_key(str(test_u1), default_group=str(args.test_group))
+    test_group0, x_key_test = _parse_group_key(
+        str(test_u0), default_group=str(args.test_group)
+    )
+    test_group1, y_key_test = _parse_group_key(
+        str(test_u1), default_group=str(args.test_group)
+    )
     if test_group0 != test_group1:
-        p.error(f"test_u0_key and test_u1_key must share a group (got {test_group0!r} vs {test_group1!r}).")
+        p.error(
+            f"test_u0_key and test_u1_key must share a group (got {test_group0!r} vs {test_group1!r})."
+        )
 
     if x_key_train != x_key_test or y_key_train != y_key_test:
         p.error(
@@ -90,7 +109,9 @@ def _apply_legacy_u0_u1_keys(args: argparse.Namespace, p: argparse.ArgumentParse
     args.y_key = str(y_key_train)
 
 
-def _inverse_translate(arr: np.ndarray, shifts: List[int], axes: List[int], out_shape: tuple[int, ...]) -> np.ndarray:
+def _inverse_translate(
+    arr: np.ndarray, shifts: List[int], axes: List[int], out_shape: tuple[int, ...]
+) -> np.ndarray:
     # arr is flat; reshape, roll back, flatten
     y = arr.reshape(out_shape)
     for ax, sh in zip(axes, shifts):
@@ -110,7 +131,14 @@ class PDEBenchTranslationDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Data
-        p.add_argument("--dataset", "--data", dest="dataset", type=str, required=True, help="Path to PDEBench HDF5")
+        p.add_argument(
+            "--dataset",
+            "--data",
+            dest="dataset",
+            type=str,
+            required=True,
+            help="Path to PDEBench HDF5",
+        )
         p.add_argument("--n_train", type=int, default=20000)
         p.add_argument("--n_test", type=int, default=5000)
         p.add_argument("--train_group", type=str, default="train")
@@ -123,13 +151,38 @@ class PDEBenchTranslationDistillRecipe(Recipe):
         p.add_argument("--spatial_slice", type=str, default=None)
 
         # Legacy (older notebooks/scripts): explicit split paths like 'train/u0' and 'test/u1'.
-        p.add_argument("--train_u0_key", type=str, default=None, help="Legacy: HDF5 path for train inputs (u0).")
-        p.add_argument("--train_u1_key", type=str, default=None, help="Legacy: HDF5 path for train targets (u1).")
-        p.add_argument("--test_u0_key", type=str, default=None, help="Legacy: HDF5 path for test inputs (u0).")
-        p.add_argument("--test_u1_key", type=str, default=None, help="Legacy: HDF5 path for test targets (u1).")
+        p.add_argument(
+            "--train_u0_key",
+            type=str,
+            default=None,
+            help="Legacy: HDF5 path for train inputs (u0).",
+        )
+        p.add_argument(
+            "--train_u1_key",
+            type=str,
+            default=None,
+            help="Legacy: HDF5 path for train targets (u1).",
+        )
+        p.add_argument(
+            "--test_u0_key",
+            type=str,
+            default=None,
+            help="Legacy: HDF5 path for test inputs (u0).",
+        )
+        p.add_argument(
+            "--test_u1_key",
+            type=str,
+            default=None,
+            help="Legacy: HDF5 path for test targets (u1).",
+        )
 
         # Symmetry
-        p.add_argument("--axes", type=str, default="0", help="Comma-separated axes to roll (e.g., '0' or '1,2')")
+        p.add_argument(
+            "--axes",
+            type=str,
+            default="0",
+            help="Comma-separated axes to roll (e.g., '0' or '1,2')",
+        )
         p.add_argument("--max_shift", type=int, default=8)
         p.add_argument("--k_train", type=int, default=4)
         p.add_argument("--k_test", type=int, default=8)
@@ -171,7 +224,11 @@ class PDEBenchTranslationDistillRecipe(Recipe):
             y_key=(None if args.y_key in (None, "None", "") else str(args.y_key)),
             t0=int(args.t0),
             t1=int(args.t1),
-            spatial_slice=(None if args.spatial_slice in (None, "None", "") else str(args.spatial_slice)),
+            spatial_slice=(
+                None
+                if args.spatial_slice in (None, "None", "")
+                else str(args.spatial_slice)
+            ),
         )
         world = PDEBenchH5Adapter(adapter_cfg).load()
         train = world["train"]
@@ -182,7 +239,11 @@ class PDEBenchTranslationDistillRecipe(Recipe):
         X_test = _featurize(test)
         y_test = _targets(test)
 
-        out_shape = tuple(np.asarray(train[0]["y"]).shape) if train else tuple(np.asarray(test[0]["y"]).shape)
+        out_shape = (
+            tuple(np.asarray(train[0]["y"]).shape)
+            if train
+            else tuple(np.asarray(test[0]["y"]).shape)
+        )
         out_dim = int(np.prod(out_shape))
 
         # Train/val split
@@ -218,7 +279,9 @@ class PDEBenchTranslationDistillRecipe(Recipe):
         mse_test = float(np.mean((yhat_test - y_test) ** 2))
 
         sym = PeriodicTranslationSymmetry(
-            PeriodicTranslationConfig(keys=["x", "y"], axes=axes, max_shift=int(args.max_shift))
+            PeriodicTranslationConfig(
+                keys=["x", "y"], axes=axes, max_shift=int(args.max_shift)
+            )
         )
 
         # Teacher gap: translate inputs, predict, inverse-translate predictions back
@@ -227,7 +290,10 @@ class PDEBenchTranslationDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             pred = predict(teacher, _featurize(view), device=device)
             # canonicalize
             canon = np.empty_like(pred)
@@ -244,7 +310,10 @@ class PDEBenchTranslationDistillRecipe(Recipe):
             if j == 0:
                 view = train
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j)) for i, ex in enumerate(train)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j))
+                    for i, ex in enumerate(train)
+                ]
             train_views.append(view)
             pred = predict(teacher, _featurize(view), device=device)
             canon = np.empty_like(pred)
@@ -286,11 +355,13 @@ class PDEBenchTranslationDistillRecipe(Recipe):
         # Split student train/val
         if bool(args.student_train_on_views):
             k = int(args.k_train)
+
             def _replicate(idxs: np.ndarray) -> np.ndarray:
                 out = []
                 for j in range(k):
                     out.append(idxs + j * n)
                 return np.concatenate(out, axis=0)
+
             idx_tr_s = _replicate(idx_tr)
             idx_val_s = _replicate(idx_val)
         else:
@@ -323,7 +394,10 @@ class PDEBenchTranslationDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             pred = predict(student, _featurize(view), device=device)
             canon = np.empty_like(pred)
             for i, ex in enumerate(view):
@@ -343,9 +417,21 @@ class PDEBenchTranslationDistillRecipe(Recipe):
                 "n_train": int(len(train)),
                 "n_test": int(len(test)),
             },
-            "symmetry": {"name": "periodic_translation", "axes": axes, "max_shift": int(args.max_shift)},
-            "teacher": {"metrics": {**teacher_metrics, "mse_test": mse_test, **teacher_gap}},
-            "student": {"metrics": {**student_metrics, "mse_test": student_mse_test, **student_gap}},
+            "symmetry": {
+                "name": "periodic_translation",
+                "axes": axes,
+                "max_shift": int(args.max_shift),
+            },
+            "teacher": {
+                "metrics": {**teacher_metrics, "mse_test": mse_test, **teacher_gap}
+            },
+            "student": {
+                "metrics": {
+                    **student_metrics,
+                    "mse_test": student_mse_test,
+                    **student_gap,
+                }
+            },
             "distill": {
                 "k_train": int(args.k_train),
                 "k_test": int(args.k_test),

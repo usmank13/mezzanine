@@ -8,10 +8,22 @@ import numpy as np
 
 try:
     # Package import (preferred): python -m numerical_visualiser.generate_hero_gifs
-    from .common import fig_to_image, footer_from_results, load_json, quantize_frames, save_gif
+    from .common import (
+        fig_to_image,
+        footer_from_results,
+        load_json,
+        quantize_frames,
+        save_gif,
+    )
 except ImportError:  # pragma: no cover
     # Script import fallback: python numerical_visualiser/generate_hero_gifs.py
-    from common import fig_to_image, footer_from_results, load_json, quantize_frames, save_gif
+    from common import (
+        fig_to_image,
+        footer_from_results,
+        load_json,
+        quantize_frames,
+        save_gif,
+    )
 
 
 def _mpl() -> Any:
@@ -60,7 +72,12 @@ def generate_storyboard_hero_gif(
     draw = ImageDraw.Draw(base)
 
     # Header card
-    draw.rounded_rectangle((pad, pad, int(width) - pad, header_h - pad // 2), radius=16, fill=card, outline=None)
+    draw.rounded_rectangle(
+        (pad, pad, int(width) - pad, header_h - pad // 2),
+        radius=16,
+        fill=card,
+        outline=None,
+    )
 
     try:
         font_kicker = ImageFont.truetype("DejaVuSans.ttf", 18)
@@ -74,9 +91,19 @@ def generate_storyboard_hero_gif(
     head_box = draw.textbbox((0, 0), headline, font=font_head)
     total_h = (kicker_box[3] - kicker_box[1]) + 6 + (head_box[3] - head_box[1])
     y0 = pad + (header_h - pad - total_h) // 2
-    draw.text(((int(width) - (kicker_box[2] - kicker_box[0])) // 2, y0), kicker, fill=(20, 20, 20), font=font_kicker)
+    draw.text(
+        ((int(width) - (kicker_box[2] - kicker_box[0])) // 2, y0),
+        kicker,
+        fill=(20, 20, 20),
+        font=font_kicker,
+    )
     y1 = y0 + (kicker_box[3] - kicker_box[1]) + 6
-    draw.text(((int(width) - (head_box[2] - head_box[0])) // 2, y1), headline, fill=(10, 10, 10), font=font_head)
+    draw.text(
+        ((int(width) - (head_box[2] - head_box[0])) // 2, y1),
+        headline,
+        fill=(10, 10, 10),
+        font=font_head,
+    )
 
     # Tile order matches the index.html grid.
     gif_paths = [
@@ -142,7 +169,13 @@ def generate_storyboard_hero_gif(
         frames_out.append(fr)
 
     out_path = out_dir / "numerics_symmetry_hero_animated.gif"
-    save_gif(quantize_frames(frames_out), out_path, duration_ms=int(duration_ms), loop=0, optimize=True)
+    save_gif(
+        quantize_frames(frames_out),
+        out_path,
+        duration_ms=int(duration_ms),
+        loop=0,
+        optimize=True,
+    )
 
 
 def generate_kepler_anglewrap_gif(
@@ -160,7 +193,9 @@ def generate_kepler_anglewrap_gif(
     import matplotlib.pyplot as plt
 
     z = np.load(dataset_npz, allow_pickle=False)
-    E0 = float(np.asarray(z["test_E"], dtype=np.float64).reshape(-1)[0])  # canonical in [0,2π)
+    E0 = float(
+        np.asarray(z["test_E"], dtype=np.float64).reshape(-1)[0]
+    )  # canonical in [0,2π)
     period = float(2.0 * np.pi)
 
     results = load_json(results_json)
@@ -193,12 +228,30 @@ def generate_kepler_anglewrap_gif(
         ax0 = fig.add_subplot(gs[0, 0])
         ax0.set_title("Kepler root finding: branch ambiguity", fontsize=11)
         ax0.axhline(0.0, color="C0", lw=1.0, alpha=0.25)
-        ax0.scatter(Es, np.zeros_like(Es), s=50, color="C0", label="teacher E (unwrapped)")
-        ax0.scatter([naive], [0.0], s=70, marker="x", color="C1", linewidths=3, label="naive mean (BAD)")
-        ax0.scatter([E0], [0.0], s=90, marker="*", color="C2", label="canonical E mod 2\u03c0")
+        ax0.scatter(
+            Es, np.zeros_like(Es), s=50, color="C0", label="teacher E (unwrapped)"
+        )
+        ax0.scatter(
+            [naive],
+            [0.0],
+            s=70,
+            marker="x",
+            color="C1",
+            linewidths=3,
+            label="naive mean (BAD)",
+        )
+        ax0.scatter(
+            [E0], [0.0], s=90, marker="*", color="C2", label="canonical E mod 2\u03c0"
+        )
         ticks = [E0 + period * k for k in range(-int(max_k), int(max_k) + 1)]
         ax0.set_xticks(ticks)
-        ax0.set_xticklabels([f"E0{('+' if k >= 0 else '')}{k}\u00b72\u03c0" for k in range(-int(max_k), int(max_k) + 1)], rotation=20)
+        ax0.set_xticklabels(
+            [
+                f"E0{('+' if k >= 0 else '')}{k}\u00b72\u03c0"
+                for k in range(-int(max_k), int(max_k) + 1)
+            ],
+            rotation=20,
+        )
         ax0.set_yticks([])
         ax0.set_xlim(E0 - period * (max_k + 0.15), E0 + period * (max_k + 0.15))
         ax0.set_xlabel(f"sampled wraps k={ks}")
@@ -213,7 +266,15 @@ def generate_kepler_anglewrap_gif(
         xE, yE = _circle_xy(np.array([E0]))
         xn, yn = _circle_xy(np.array([naive_mod]))
         ax1.scatter(xE, yE, s=55, color="C0", label="teacher E mod 2\u03c0")
-        ax1.scatter(xn, yn, s=70, marker="x", color="C1", linewidths=3, label="naive mean mapped")
+        ax1.scatter(
+            xn,
+            yn,
+            s=70,
+            marker="x",
+            color="C1",
+            linewidths=3,
+            label="naive mean mapped",
+        )
         ax1.scatter(xE, yE, s=90, marker="*", color="C2", label="canonical")
         ax1.set_aspect("equal", adjustable="box")
         ax1.set_xticks([])
@@ -295,14 +356,19 @@ def generate_integration_circular_shift_gif(
         )
 
         ax_f_true = fig.add_subplot(gs[0, 0])
-        ax_f_true.set_title("Integration on periodic domain (TRUE symmetry): mean(f) is shift-invariant", fontsize=11)
+        ax_f_true.set_title(
+            "Integration on periodic domain (TRUE symmetry): mean(f) is shift-invariant",
+            fontsize=11,
+        )
         ax_f_true.plot(fp, color="C0", lw=1.5)
         ax_f_true.axvspan(0, w, color="C0", alpha=0.12, lw=0)
         ax_f_true.set_ylabel("f(x)")
         ax_f_true.set_xlim(0, L - 1)
 
         ax_f_false = fig.add_subplot(gs[1, 0])
-        ax_f_false.set_title("BREAK control (FALSE symmetry): window mean depends on shift", fontsize=11)
+        ax_f_false.set_title(
+            "BREAK control (FALSE symmetry): window mean depends on shift", fontsize=11
+        )
         ax_f_false.plot(fp, color="C0", lw=1.5)
         ax_f_false.axvspan(0, w, color="C0", alpha=0.12, lw=0)
         ax_f_false.set_xlabel("grid index")
@@ -314,7 +380,9 @@ def generate_integration_circular_shift_gif(
         ax_y_true.axhline(y_true, color="C0", lw=2.0, label="true")
         ax_y_true.axhline(y_teacher, color="C1", lw=2.0, label="teacher")
         ax_y_true.axhline(y_student, color="C2", lw=2.0, label="student")
-        ax_y_true.text(0.02, 0.03, f"shift={sh:+d}", transform=ax_y_true.transAxes, fontsize=9)
+        ax_y_true.text(
+            0.02, 0.03, f"shift={sh:+d}", transform=ax_y_true.transAxes, fontsize=9
+        )
         ax_y_true.set_xticks([])
         ax_y_true.set_ylabel("value")
         ax_y_true.legend(loc="upper right", fontsize=8, frameon=False)
@@ -323,7 +391,9 @@ def generate_integration_circular_shift_gif(
         ax_y_false.set_title("Predicted window mean", fontsize=11)
         ax_y_false.axhline(yw_true, color="C0", lw=2.0, label="true")
         ax_y_false.axhline(yw_teacher, color="C1", lw=2.0, label="teacher")
-        ax_y_false.axhline(yw_student_forced, color="C2", lw=2.0, label="student (forced invariant)")
+        ax_y_false.axhline(
+            yw_student_forced, color="C2", lw=2.0, label="student (forced invariant)"
+        )
         ax_y_false.set_xticks([])
         ax_y_false.set_ylabel("value")
         ax_y_false.legend(loc="upper right", fontsize=8, frameon=False)
@@ -397,26 +467,42 @@ def generate_linear_system_permutation_gif(
         ax0.imshow(mask, cmap="viridis", interpolation="nearest")
         ax0.set_xticks([])
         ax0.set_yticks([])
-        ax0.set_xlabel(f"random permutation #{frame_idx+1}")
+        ax0.set_xlabel(f"random permutation #{frame_idx + 1}")
 
         ax1 = fig.add_subplot(gs[0, 1])
         ax1.set_title("Teacher: shifts under permutation", fontsize=11)
         ax1.plot(x0, color="C0", lw=1.8, label="true x")
         ax1.plot(teacher_base, color="C1", lw=1.6, label="teacher (base)")
-        ax1.plot(teacher_perm_canon, color="C2", lw=1.6, label="teacher (perm\u2192canon)")
+        ax1.plot(
+            teacher_perm_canon, color="C2", lw=1.6, label="teacher (perm\u2192canon)"
+        )
         ax1.set_xlabel("node index")
         ax1.set_ylabel("x")
-        ax1.text(0.02, 0.02, f"||\u0394||\u2082={d_teacher:.2f}", transform=ax1.transAxes, fontsize=10)
+        ax1.text(
+            0.02,
+            0.02,
+            f"||\u0394||\u2082={d_teacher:.2f}",
+            transform=ax1.transAxes,
+            fontsize=10,
+        )
         ax1.legend(loc="upper right", fontsize=8, frameon=False)
 
         ax2 = fig.add_subplot(gs[0, 2])
         ax2.set_title("Student: orbit-marginalized", fontsize=11)
         ax2.plot(x0, color="C0", lw=1.8, label="true x")
         ax2.plot(student_base, color="C1", lw=1.6, label="student (base)")
-        ax2.plot(student_perm_canon, color="C2", lw=1.6, label="student (perm\u2192canon)")
+        ax2.plot(
+            student_perm_canon, color="C2", lw=1.6, label="student (perm\u2192canon)"
+        )
         ax2.set_xlabel("node index")
         ax2.set_ylabel("x")
-        ax2.text(0.02, 0.02, f"||\u0394||\u2082={d_student:.2f}", transform=ax2.transAxes, fontsize=10)
+        ax2.text(
+            0.02,
+            0.02,
+            f"||\u0394||\u2082={d_student:.2f}",
+            transform=ax2.transAxes,
+            fontsize=10,
+        )
         ax2.legend(loc="upper right", fontsize=8, frameon=False)
 
         fig.text(0.5, 0.02, footer, ha="center", va="bottom", fontsize=10)
@@ -448,7 +534,6 @@ def generate_ode_time_origin_gif(
     results = load_json(results_json)
     footer = footer_from_results(results)
 
-    rng = _rng(seed)
     omega = np.pi / 2.0
     cs = np.linspace(-float(max_shift), float(max_shift), 241)
 
@@ -569,7 +654,14 @@ def generate_pdebench_translation_gif(
         ax00.imshow(u0v, cmap="viridis", interpolation="nearest", vmin=-vmax, vmax=vmax)
         ax00.set_xticks([])
         ax00.set_yticks([])
-        ax00.text(0.03, 0.05, f"shift={sh:+d}", transform=ax00.transAxes, fontsize=10, color="w")
+        ax00.text(
+            0.03,
+            0.05,
+            f"shift={sh:+d}",
+            transform=ax00.transAxes,
+            fontsize=10,
+            color="w",
+        )
 
         ax01 = fig.add_subplot(gs[0, 1])
         ax01.set_title("True u1", fontsize=11)
@@ -579,13 +671,17 @@ def generate_pdebench_translation_gif(
 
         ax02 = fig.add_subplot(gs[0, 2])
         ax02.set_title("Teacher prediction", fontsize=11)
-        ax02.imshow(teacher, cmap="viridis", interpolation="nearest", vmin=-vmax, vmax=vmax)
+        ax02.imshow(
+            teacher, cmap="viridis", interpolation="nearest", vmin=-vmax, vmax=vmax
+        )
         ax02.set_xticks([])
         ax02.set_yticks([])
 
         ax10 = fig.add_subplot(gs[1, 0])
         ax10.set_title("Student (marginalized)", fontsize=11)
-        ax10.imshow(student, cmap="viridis", interpolation="nearest", vmin=-vmax, vmax=vmax)
+        ax10.imshow(
+            student, cmap="viridis", interpolation="nearest", vmin=-vmax, vmax=vmax
+        )
         ax10.set_xticks([])
         ax10.set_yticks([])
 
@@ -679,13 +775,31 @@ def generate_eigen_permutation_gif(
         ax2 = fig.add_subplot(gs[0, 2])
         ax2.set_title("Top eigenvalues (invariant target)", fontsize=11)
         ax2.plot(xs, y_true, marker="o", color="C0", lw=1.8, label="true")
-        ax2.plot(xs, teacher_canon, marker="o", color="C1", lw=1.3, label="teacher (canon)")
-        ax2.plot(xs, teacher_perm, marker="o", color="C2", lw=1.3, label="teacher (perm)")
-        ax2.plot(xs, student_perm, marker="o", color="C3", lw=1.3, label="student (perm)")
+        ax2.plot(
+            xs, teacher_canon, marker="o", color="C1", lw=1.3, label="teacher (canon)"
+        )
+        ax2.plot(
+            xs, teacher_perm, marker="o", color="C2", lw=1.3, label="teacher (perm)"
+        )
+        ax2.plot(
+            xs, student_perm, marker="o", color="C3", lw=1.3, label="student (perm)"
+        )
         ax2.set_xlabel("eigenvalue rank")
         ax2.set_ylabel("\u03bb")
-        ax2.text(0.02, 0.10, f"||\u0394||\u2082 teacher={d_teacher:.2f}", transform=ax2.transAxes, fontsize=10)
-        ax2.text(0.02, 0.02, f"||\u0394||\u2082 student={d_student:.2f}", transform=ax2.transAxes, fontsize=10)
+        ax2.text(
+            0.02,
+            0.10,
+            f"||\u0394||\u2082 teacher={d_teacher:.2f}",
+            transform=ax2.transAxes,
+            fontsize=10,
+        )
+        ax2.text(
+            0.02,
+            0.02,
+            f"||\u0394||\u2082 student={d_student:.2f}",
+            transform=ax2.transAxes,
+            fontsize=10,
+        )
         ax2.legend(loc="upper right", fontsize=8, frameon=False)
 
         fig.text(0.5, 0.02, footer, ha="center", va="bottom", fontsize=10)
@@ -697,7 +811,9 @@ def generate_eigen_permutation_gif(
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Generate updated hero GIFs for the numerical toy recipes.")
+    ap = argparse.ArgumentParser(
+        description="Generate updated hero GIFs for the numerical toy recipes."
+    )
     ap.add_argument("--data_dir", type=str, default="data")
     ap.add_argument("--runs_dir", type=str, default="runs")
     ap.add_argument("--out_dir", type=str, default="numerics_visuals_hero_gifs")

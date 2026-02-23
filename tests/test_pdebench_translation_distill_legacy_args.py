@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mezzanine.recipes.pdebench_translation_distill import PDEBenchTranslationDistillRecipe, _apply_legacy_u0_u1_keys
+from mezzanine.recipes.pdebench_translation_distill import (
+    PDEBenchTranslationDistillRecipe,
+    _apply_legacy_u0_u1_keys,
+)
 
 
 def test_pdebench_translation_distill_accepts_legacy_u0_u1_keys(tmp_path: Path) -> None:

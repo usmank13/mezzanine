@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
@@ -9,6 +9,10 @@ import math
 import time
 import os
 import inspect
+
+from ..core.cache import hash_dict
+from ..registry import ADAPTERS
+from .base import WorldAdapter
 
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -125,7 +129,9 @@ def collect_iphyre(cfg: IPhyreCollectConfig) -> Dict[str, Any]:
         last_log_t = time.time()
 
         samples: List[Dict[str, Any]] = []
-        print(f"[collect] start game={game} split={split} target={target} dt={dt:.4f}s delta_steps={delta_steps} clickables={len(clickables)} max_attempts={max_attempts}")
+        print(
+            f"[collect] start game={game} split={split} target={target} dt={dt:.4f}s delta_steps={delta_steps} clickables={len(clickables)} max_attempts={max_attempts}"
+        )
 
         while attempts < max_attempts and got < target:
             attempts += 1
@@ -144,7 +150,9 @@ def collect_iphyre(cfg: IPhyreCollectConfig) -> Dict[str, Any]:
             do_action = (len(clickables) > 0) and (rng.random() > cfg.p_no_action)
             if do_action:
                 a_idx = rng.choice(clickables)
-                click_step = rng.randint(0, max(1, min(cfg.max_steps - 1, int(0.6 * delta_steps))))
+                click_step = rng.randint(
+                    0, max(1, min(cfg.max_steps - 1, int(0.6 * delta_steps)))
+                )
                 action_idxs[click_step] = a_idx
                 a_time = float(click_step) / float(max(1, delta_steps - 1))
 
@@ -153,7 +161,9 @@ def collect_iphyre(cfg: IPhyreCollectConfig) -> Dict[str, Any]:
             for t in range(cfg.max_steps):
                 a = action_idxs[t]
                 try:
-                    obs, r, done = call_with_accepted_kwargs(env.step, positions[a], use_image=True)
+                    obs, r, done = call_with_accepted_kwargs(
+                        env.step, positions[a], use_image=True
+                    )
                 except TypeError:
                     obs, r, done = env.step(positions[a])
                 img = extract_image(obs, env=env)
@@ -172,18 +182,20 @@ def collect_iphyre(cfg: IPhyreCollectConfig) -> Dict[str, Any]:
             rng.shuffle(possible_t0)
             for _ in range(min(cfg.per_episode_samples, len(possible_t0))):
                 t0 = possible_t0.pop()
-                samples.append({
-                    "split": split,
-                    "game": game,
-                    "dt": float(dt),
-                    "delta_steps": int(delta_steps),
-                    "img_t": frames[t0],
-                    "img_tp": frames[t0 + delta_steps],
-                    "action_window": action_idxs[t0: t0 + delta_steps],
-                    "action_idx_single": int(a_idx),
-                    "action_time_single": float(a_time),
-                    "max_eli": int(max_eli),
-                })
+                samples.append(
+                    {
+                        "split": split,
+                        "game": game,
+                        "dt": float(dt),
+                        "delta_steps": int(delta_steps),
+                        "img_t": frames[t0],
+                        "img_tp": frames[t0 + delta_steps],
+                        "action_window": action_idxs[t0 : t0 + delta_steps],
+                        "action_idx_single": int(a_idx),
+                        "action_time_single": float(a_time),
+                        "max_eli": int(max_eli),
+                    }
+                )
                 got += 1
                 added_total += 1
                 if got >= target:
@@ -194,16 +206,28 @@ def collect_iphyre(cfg: IPhyreCollectConfig) -> Dict[str, Any]:
                 attempt_times = attempt_times[-200:]
 
             now = time.time()
-            if (cfg.log_every_attempts > 0 and attempts % cfg.log_every_attempts == 0) or (now - last_log_t) >= cfg.log_every_seconds:
+            if (
+                cfg.log_every_attempts > 0 and attempts % cfg.log_every_attempts == 0
+            ) or (now - last_log_t) >= cfg.log_every_seconds:
                 last_log_t = now
-                sample_rate = (got / max(1e-6, sum(attempt_times))) if attempt_times else 0.0
+                sample_rate = (
+                    (got / max(1e-6, sum(attempt_times))) if attempt_times else 0.0
+                )
                 remaining = max(0, target - got)
-                eta_s = (remaining / max(1e-6, sample_rate)) if sample_rate > 0 else float("inf")
-                print(f"[collect] progress game={game} split={split} attempts={attempts}/{max_attempts} got={got}/{target} "
-                      f"fail_no_img={fail_no_img} fail_short={fail_short} samp/s={sample_rate:.2f} eta={eta_s/60.0:.1f}m")
+                eta_s = (
+                    (remaining / max(1e-6, sample_rate))
+                    if sample_rate > 0
+                    else float("inf")
+                )
+                print(
+                    f"[collect] progress game={game} split={split} attempts={attempts}/{max_attempts} got={got}/{target} "
+                    f"fail_no_img={fail_no_img} fail_short={fail_short} samp/s={sample_rate:.2f} eta={eta_s / 60.0:.1f}m"
+                )
 
         if got < target:
-            print(f"[collect] warning game={game} split={split}: got {got}/{target} after {attempts} attempts.")
+            print(
+                f"[collect] warning game={game} split={split}: got {got}/{target} after {attempts} attempts."
+            )
         return samples[:target]
 
     train: List[Dict[str, Any]] = []
@@ -223,15 +247,11 @@ def collect_iphyre(cfg: IPhyreCollectConfig) -> Dict[str, Any]:
             **cfg.__dict__,
             "train_per_game": train_per_game,
             "test_per_game": test_per_game,
-        }
+        },
     }
 
 
 # === Adapter wrapper (for registry + caching) ===
-
-from dataclasses import asdict
-from ..core.cache import hash_dict
-from .base import WorldAdapter
 
 
 class IPhyreAdapter(WorldAdapter):
@@ -241,7 +261,9 @@ class IPhyreAdapter(WorldAdapter):
     """
 
     NAME = "iphyre"
-    DESCRIPTION = "I-PHYRE simulator adapter producing image transitions with action metadata."
+    DESCRIPTION = (
+        "I-PHYRE simulator adapter producing image transitions with action metadata."
+    )
 
     def __init__(self, cfg: IPhyreCollectConfig):
         self.cfg = cfg
@@ -256,5 +278,4 @@ class IPhyreAdapter(WorldAdapter):
 
 
 # Register
-from ..registry import ADAPTERS
 ADAPTERS.register("iphyre")(IPhyreAdapter)

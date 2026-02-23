@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
 
 
@@ -15,12 +16,15 @@ class FactorizationSymmetryConfig:
     In practice this is task-specific (e.g., tool-call orderings, reasoning decompositions),
     so this class provides a minimal general default: shuffle key-value pairs.
     """
+
     shuffle: bool = True
 
 
 class FactorizationSymmetry(Symmetry):
     NAME = "factorization"
-    DESCRIPTION = "Shuffle a dict's key-value decomposition (generic factorization symmetry)."
+    DESCRIPTION = (
+        "Shuffle a dict's key-value decomposition (generic factorization symmetry)."
+    )
 
     def __init__(self, cfg: FactorizationSymmetryConfig):
         self.cfg = cfg
@@ -35,5 +39,4 @@ class FactorizationSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-SYMMETRIES.register('factorization')( FactorizationSymmetry )
+SYMMETRIES.register("factorization")(FactorizationSymmetry)

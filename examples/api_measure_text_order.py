@@ -35,7 +35,7 @@ def make_views(texts, seed: int, k: int):
             if len(parts) <= 1:
                 vj.append(t)
             else:
-                perm = symmetry.sample(parts, seed=(seed + 1000*i + 97*j))
+                perm = symmetry.sample(parts, seed=(seed + 1000 * i + 97 * j))
                 vj.append(join_sentences(list(perm)))
         views.append(vj)
     return views
@@ -46,9 +46,14 @@ def main():
         "John went to the store. He bought milk. Then he went home.",
         "The cat sat on the mat. It purred loudly. The dog barked.",
     ]
-    encoder = HFLanguageEncoder(HFLanguageEncoderConfig(model_name="distilbert-base-uncased", max_length=128, batch_size=8))
+    encoder = HFLanguageEncoder(
+        HFLanguageEncoderConfig(
+            model_name="distilbert-base-uncased", max_length=128, batch_size=8
+        )
+    )
     res = measure(inputs=texts, make_views=make_views, encoder=encoder, k=8, seed=0)
     print(res)
+
 
 if __name__ == "__main__":
     main()

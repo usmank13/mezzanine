@@ -1,18 +1,25 @@
-from __future__ import annotations
-
 """Audio playback symmetry (nuisance mapped to SYMMETRIES).
 
 This symmetry simulates mild playback variation: gain, noise, mono fold,
 low-pass filtering, and small time-stretch.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
-from ..utils.audio import ensure_2d, add_noise_db, apply_lowpass, _resample_to_length, _pad_or_trim
+from ..utils.audio import (
+    ensure_2d,
+    add_noise_db,
+    apply_lowpass,
+    _resample_to_length,
+    _pad_or_trim,
+)
 
 
 @dataclass
@@ -31,6 +38,7 @@ class AudioPlaybackConfig:
 
 class AudioPlaybackSymmetry(Symmetry):
     """Playback-chain nuisance mapped into the Symmetry registry."""
+
     NAME = "audio_playback"
     DESCRIPTION = "Playback nuisance: gain/noise/mono/lowpass/time-stretch."
 
@@ -80,5 +88,4 @@ class AudioPlaybackSymmetry(Symmetry):
         return y.astype(np.float32)
 
 
-from ..registry import SYMMETRIES
 SYMMETRIES.register("audio_playback")(AudioPlaybackSymmetry)

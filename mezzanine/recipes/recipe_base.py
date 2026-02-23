@@ -47,17 +47,39 @@ class Recipe(abc.ABC):
 
     @classmethod
     def add_common_args(cls, p: argparse.ArgumentParser) -> None:
-        p.add_argument("--config", type=str, default=None, help="YAML/JSON config file (applies as defaults).")
+        p.add_argument(
+            "--config",
+            type=str,
+            default=None,
+            help="YAML/JSON config file (applies as defaults).",
+        )
         p.add_argument("--seed", type=int, default=0, help="Global random seed.")
-        p.add_argument("--cache_dir", type=str, default=None, help="Latent cache directory (optional).")
-        p.add_argument("--no_cache", action="store_true", help="Disable latent caching even if cache_dir is set.")
-        p.add_argument("--log", type=str, default="none", help="Logging: none|tensorboard|wandb")
-        p.add_argument("--wandb_project", type=str, default="mezzanine", help="wandb project name")
+        p.add_argument(
+            "--cache_dir",
+            type=str,
+            default=None,
+            help="Latent cache directory (optional).",
+        )
+        p.add_argument(
+            "--no_cache",
+            action="store_true",
+            help="Disable latent caching even if cache_dir is set.",
+        )
+        p.add_argument(
+            "--log", type=str, default="none", help="Logging: none|tensorboard|wandb"
+        )
+        p.add_argument(
+            "--wandb_project", type=str, default="mezzanine", help="wandb project name"
+        )
         p.add_argument("--wandb_name", type=str, default=None, help="wandb run name")
-        p.add_argument("--wandb_entity", type=str, default=None, help="wandb entity/org")
+        p.add_argument(
+            "--wandb_entity", type=str, default=None, help="wandb entity/org"
+        )
 
     @staticmethod
-    def apply_config_defaults(parser: argparse.ArgumentParser, args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    def apply_config_defaults(
+        parser: argparse.ArgumentParser, args: argparse.Namespace, cfg: Dict[str, Any]
+    ) -> None:
         """Override args with cfg values ONLY if args still equal argparse defaults."""
         for k, v in cfg.items():
             if not hasattr(args, k):
@@ -80,7 +102,11 @@ class Recipe(abc.ABC):
         cache: Optional[LatentCache] = None
         cache_dir = getattr(args, "cache_dir", None)
         if cache_dir and (not getattr(args, "no_cache", False)):
-            cache = LatentCache(LatentCacheConfig(cache_dir=Path(cache_dir), enabled=True, compress=True))
+            cache = LatentCache(
+                LatentCacheConfig(
+                    cache_dir=Path(cache_dir), enabled=True, compress=True
+                )
+            )
 
         logger = make_logger(
             getattr(args, "log", "none"),
@@ -90,7 +116,9 @@ class Recipe(abc.ABC):
             wandb_name=getattr(args, "wandb_name", None),
             wandb_entity=getattr(args, "wandb_entity", None),
         )
-        return RunContext(out_dir=out_dir, config=cfg, seed=seed, cache=cache, logger=logger)
+        return RunContext(
+            out_dir=out_dir, config=cfg, seed=seed, cache=cache, logger=logger
+        )
 
     @abc.abstractmethod
     def run(self, argv: list[str]) -> Dict[str, Any]:

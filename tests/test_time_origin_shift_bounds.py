@@ -31,7 +31,9 @@ def test_time_origin_shift_respects_t_bounds() -> None:
     TimeOriginShiftConfig = m.TimeOriginShiftConfig
     TimeOriginShiftSymmetry = m.TimeOriginShiftSymmetry
 
-    sym = TimeOriginShiftSymmetry(TimeOriginShiftConfig(max_shift=50.0, t_min=0.0, t_max=10.0))
+    sym = TimeOriginShiftSymmetry(
+        TimeOriginShiftConfig(max_shift=50.0, t_min=0.0, t_max=10.0)
+    )
 
     for t0 in [0.0, 1.0, 9.0, 10.0]:
         x = {"t": t0}
@@ -45,8 +47,9 @@ def test_time_origin_shift_unbounded_when_no_bounds() -> None:
     TimeOriginShiftConfig = m.TimeOriginShiftConfig
     TimeOriginShiftSymmetry = m.TimeOriginShiftSymmetry
 
-    sym = TimeOriginShiftSymmetry(TimeOriginShiftConfig(max_shift=1.0, t_min=None, t_max=None))
+    sym = TimeOriginShiftSymmetry(
+        TimeOriginShiftConfig(max_shift=1.0, t_min=None, t_max=None)
+    )
     x = {"t": 0.0}
     y = sym.sample(x, seed=0)
     assert -1.0 <= float(y["t"]) <= 1.0
-

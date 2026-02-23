@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -69,7 +69,9 @@ class EigenNPZAdapter(WorldAdapter):
         }
         return json.dumps(fp, sort_keys=True)
 
-    def _build_split(self, split: str, n_target: int, seed: int) -> List[Dict[str, Any]]:
+    def _build_split(
+        self, split: str, n_target: int, seed: int
+    ) -> List[Dict[str, Any]]:
         A = self._data[f"{split}_A"].astype(np.float32)
         evals = self._data.get(f"{split}_eval", None)
         if evals is None:
@@ -88,7 +90,11 @@ class EigenNPZAdapter(WorldAdapter):
 
         n_total = int(A.shape[0])
         n_take = min(int(n_target), n_total)
-        idxs = deterministic_subsample_indices(n_total, n_take, seed) if n_take > 0 else np.array([], dtype=np.int64)
+        idxs = (
+            deterministic_subsample_indices(n_total, n_take, seed)
+            if n_take > 0
+            else np.array([], dtype=np.int64)
+        )
 
         out: List[Dict[str, Any]] = []
         for i in idxs:
@@ -102,8 +108,16 @@ class EigenNPZAdapter(WorldAdapter):
     def load(self) -> Dict[str, Any]:
         train = self._build_split("train", self.config.n_train, self.config.seed)
         test = self._build_split("test", self.config.n_test, self.config.seed + 1)
-        n = int(train[0]["A"].shape[0]) if train else (int(test[0]["A"].shape[0]) if test else 0)
-        k = int(train[0]["eval"].shape[0]) if train else (int(test[0]["eval"].shape[0]) if test else 0)
+        n = (
+            int(train[0]["A"].shape[0])
+            if train
+            else (int(test[0]["A"].shape[0]) if test else 0)
+        )
+        k = (
+            int(train[0]["eval"].shape[0])
+            if train
+            else (int(test[0]["eval"].shape[0]) if test else 0)
+        )
         return {
             "train": train,
             "test": test,

@@ -23,7 +23,10 @@ def _view_seed(global_seed: int, i: int, j: int) -> int:
 
 
 def _featurize_raw(xs: List[Dict[str, Any]]) -> np.ndarray:
-    return np.stack([np.asarray(ex["f"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)
+    return np.stack(
+        [np.asarray(ex["f"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )
+
 
 def _featurize_invariant(xs: List[Dict[str, Any]]) -> np.ndarray:
     """Cheap shift-invariant summary features for periodic 1D fields.
@@ -32,14 +35,18 @@ def _featurize_invariant(xs: List[Dict[str, Any]]) -> np.ndarray:
     student to close the circular-shift warrant gap.
     """
 
-    f = np.stack([np.asarray(ex["f"], dtype=np.float32).reshape(-1) for ex in xs], axis=0)  # [N,L]
+    f = np.stack(
+        [np.asarray(ex["f"], dtype=np.float32).reshape(-1) for ex in xs], axis=0
+    )  # [N,L]
     m1 = f.mean(axis=1, keepdims=True)
     m2 = (f * f).mean(axis=1, keepdims=True)
     return np.concatenate([m1, m2], axis=1).astype(np.float32)
 
 
 def _targets(xs: List[Dict[str, Any]]) -> np.ndarray:
-    return np.stack([np.asarray(ex["y"], dtype=np.float32).reshape(1) for ex in xs], axis=0)
+    return np.stack(
+        [np.asarray(ex["y"], dtype=np.float32).reshape(1) for ex in xs], axis=0
+    )
 
 
 class IntegrationCircularShiftDistillRecipe(Recipe):
@@ -54,7 +61,14 @@ class IntegrationCircularShiftDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Data
-        p.add_argument("--dataset", "--data", dest="dataset", type=str, required=True, help="Path to integration .npz")
+        p.add_argument(
+            "--dataset",
+            "--data",
+            dest="dataset",
+            type=str,
+            required=True,
+            help="Path to integration .npz",
+        )
         p.add_argument("--n_train", type=int, default=50000)
         p.add_argument("--n_test", type=int, default=10000)
 
@@ -145,7 +159,9 @@ class IntegrationCircularShiftDistillRecipe(Recipe):
         yhat_test = predict(teacher, X_test, device=device)
         mse_test = float(np.mean((yhat_test - y_test) ** 2))
 
-        sym = CircularShiftSymmetry(CircularShiftConfig(key="f", max_shift=int(args.max_shift), axis=0))
+        sym = CircularShiftSymmetry(
+            CircularShiftConfig(key="f", max_shift=int(args.max_shift), axis=0)
+        )
 
         # Teacher gap
         preds_views: List[np.ndarray] = []
@@ -153,7 +169,10 @@ class IntegrationCircularShiftDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             preds_views.append(predict(teacher, _featurize_raw(view), device=device))
         teacher_gap = warrant_gap_regression(np.stack(preds_views, axis=0))
 
@@ -164,9 +183,14 @@ class IntegrationCircularShiftDistillRecipe(Recipe):
             if j == 0:
                 view = train
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j)) for i, ex in enumerate(train)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j))
+                    for i, ex in enumerate(train)
+                ]
             train_views.append(view)
-            preds_train_views.append(predict(teacher, _featurize_raw(view), device=device))
+            preds_train_views.append(
+                predict(teacher, _featurize_raw(view), device=device)
+            )
         y_soft = np.stack(preds_train_views, axis=0).mean(axis=0)
 
         # Student uses shift-invariant summary features.
@@ -235,8 +259,13 @@ class IntegrationCircularShiftDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
-            preds_student_views.append(predict(student, _featurize_invariant(view), device=device))
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
+            preds_student_views.append(
+                predict(student, _featurize_invariant(view), device=device)
+            )
         student_gap = warrant_gap_regression(np.stack(preds_student_views, axis=0))
 
         gap_improves = student_gap["gap_mse"] <= 0.8 * teacher_gap["gap_mse"]
@@ -251,8 +280,16 @@ class IntegrationCircularShiftDistillRecipe(Recipe):
                 "n_test": int(len(test)),
             },
             "symmetry": {"name": "circular_shift", "max_shift": int(args.max_shift)},
-            "teacher": {"metrics": {**teacher_metrics, "mse_test": mse_test, **teacher_gap}},
-            "student": {"metrics": {**student_metrics, "mse_test": student_mse_test, **student_gap}},
+            "teacher": {
+                "metrics": {**teacher_metrics, "mse_test": mse_test, **teacher_gap}
+            },
+            "student": {
+                "metrics": {
+                    **student_metrics,
+                    "mse_test": student_mse_test,
+                    **student_gap,
+                }
+            },
             "distill": {
                 "k_train": int(args.k_train),
                 "k_test": int(args.k_test),

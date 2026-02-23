@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 
 
-def latent_diversity(z: np.ndarray, pairs: int = 20000, seed: int = 0) -> Dict[str, Any]:
+def latent_diversity(
+    z: np.ndarray, pairs: int = 20000, seed: int = 0
+) -> Dict[str, Any]:
     """Quick collapse diagnostic: off-diagonal cosine similarity statistics.
 
     If offdiag_cos_mean is extremely high (e.g. > 0.995), your embedding space is effectively collapsed
@@ -19,7 +20,8 @@ def latent_diversity(z: np.ndarray, pairs: int = 20000, seed: int = 0) -> Dict[s
     i = rng.integers(0, n, size=(pairs,))
     j = rng.integers(0, n, size=(pairs,))
     m = i != j
-    i = i[m]; j = j[m]
+    i = i[m]
+    j = j[m]
     cos = np.sum(z[i] * z[j], axis=1)
     return {
         "offdiag_cos_mean": float(np.mean(cos)),

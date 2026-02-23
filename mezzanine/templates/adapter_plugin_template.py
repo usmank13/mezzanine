@@ -8,10 +8,9 @@ An adapter exposes a "world" to Mezzanine as (train, test) examples + meta.
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mezzanine.core.cache import hash_dict
-from mezzanine.core.deterministic import deterministic_subsample_indices
 from mezzanine.worlds.base import WorldAdapter
 from mezzanine.registry import ADAPTERS
 

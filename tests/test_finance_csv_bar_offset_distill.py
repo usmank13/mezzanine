@@ -31,9 +31,15 @@ def _synthetic_close_series(*, T: int = 600, seed: int = 0) -> np.ndarray:
     r = np.zeros(T - 1, dtype=np.float32)
     r[0] = 0.01 * float(rng.standard_normal())
     for t in range(1, T - 1):
-        r[t] = 0.002 * float(s[t - 1]) + 0.35 * float(r[t - 1]) + 0.01 * float(rng.standard_normal())
+        r[t] = (
+            0.002 * float(s[t - 1])
+            + 0.35 * float(r[t - 1])
+            + 0.01 * float(rng.standard_normal())
+        )
 
-    close = np.exp(np.cumsum(np.concatenate([[0.0], r.astype(np.float64)]))).astype(np.float64)
+    close = np.exp(np.cumsum(np.concatenate([[0.0], r.astype(np.float64)]))).astype(
+        np.float64
+    )
     return close
 
 
@@ -47,7 +53,10 @@ def test_registry_wiring_includes_finance_csv() -> None:
 
 
 def test_finance_csv_adapter_builds_expected_shapes(tmp_path: Path) -> None:
-    from mezzanine.worlds.finance_csv import FinanceCSVTapeAdapter, FinanceCSVTapeAdapterConfig
+    from mezzanine.worlds.finance_csv import (
+        FinanceCSVTapeAdapter,
+        FinanceCSVTapeAdapterConfig,
+    )
 
     close = _synthetic_close_series(T=300, seed=0)
     csv_path = tmp_path / "tape.csv"
@@ -74,7 +83,10 @@ def test_finance_csv_adapter_builds_expected_shapes(tmp_path: Path) -> None:
 
 
 def test_finance_csv_adapter_parses_public_ohlcv_csv() -> None:
-    from mezzanine.worlds.finance_csv import FinanceCSVTapeAdapter, FinanceCSVTapeAdapterConfig
+    from mezzanine.worlds.finance_csv import (
+        FinanceCSVTapeAdapter,
+        FinanceCSVTapeAdapterConfig,
+    )
 
     cfg = FinanceCSVTapeAdapterConfig(
         path=str(_public_ohlcv_csv_path()),
@@ -96,7 +108,9 @@ def test_finance_csv_adapter_parses_public_ohlcv_csv() -> None:
 
 
 def test_finance_csv_bar_offset_distill_runs_end_to_end(tmp_path: Path) -> None:
-    from mezzanine.recipes.finance_csv_bar_offset_distill import FinanceCSVBarOffsetDistillRecipe
+    from mezzanine.recipes.finance_csv_bar_offset_distill import (
+        FinanceCSVBarOffsetDistillRecipe,
+    )
 
     out_dir = tmp_path / "out"
     recipe = FinanceCSVBarOffsetDistillRecipe(out_dir=out_dir, config={})

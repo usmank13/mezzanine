@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
 
 
@@ -21,8 +21,11 @@ class ActionShuffleSymmetry(Symmetry):
 
     Note: shuffling actions is naturally a *batch-level* operation, so we also expose `shuffle_batch`.
     """
+
     NAME = "action_shuffle"
-    DESCRIPTION = "Counterfactual symmetry: shuffle actions across examples (batch-level)."
+    DESCRIPTION = (
+        "Counterfactual symmetry: shuffle actions across examples (batch-level)."
+    )
 
     def __init__(self, cfg: ActionShuffleConfig = ActionShuffleConfig()):
         self.cfg = cfg
@@ -43,5 +46,4 @@ class ActionShuffleSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-SYMMETRIES.register('action_shuffle')( ActionShuffleSymmetry )
+SYMMETRIES.register("action_shuffle")(ActionShuffleSymmetry)

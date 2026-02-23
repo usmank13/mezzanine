@@ -5,12 +5,10 @@ import json
 import re
 import time
 from dataclasses import asdict
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 
-from ..core.cache import LatentCache, LatentCacheConfig, hash_dict
 from ..encoders.hf_causal_lm import HFCausalLMEncoder, HFCausalLMEncoderConfig
 from ..symmetries.order import OrderSymmetry, OrderSymmetryConfig
 from ..pipelines.text_distill import (
@@ -20,7 +18,10 @@ from ..pipelines.text_distill import (
     accuracy,
     warrant_gap_from_views,
 )
-from ..predictors.hf_causal_lm import HFCausalLMChoicePredictor, HFCausalLMChoicePredictorConfig
+from ..predictors.hf_causal_lm import (
+    HFCausalLMChoicePredictor,
+    HFCausalLMChoicePredictorConfig,
+)
 from ..viz.text_distill import plot_text_order_distill
 from ..worlds.hf_qa import HFQADatasetAdapter, HFQADatasetAdapterConfig
 from .recipe_base import Recipe
@@ -88,6 +89,7 @@ class HFLLMHiddenStateOrderDistill(Recipe):
             Trained on multiple symmetry views with a single target p*(y|x),
             so it becomes invariant to order and approximates p* in one pass.
     """
+
     NAME = "hf_llm_hiddenstate_order_distill"
     DESCRIPTION = "BoolQ: distill symmetry-marginalized (order-robust) beliefs into a one-pass hidden-state head."
 
@@ -104,7 +106,12 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         p.add_argument("--n_test", type=int, default=512)
 
         # Symmetry
-        p.add_argument("--k_train", type=int, default=8, help="views per example used to define teacher + train invariance")
+        p.add_argument(
+            "--k_train",
+            type=int,
+            default=8,
+            help="views per example used to define teacher + train invariance",
+        )
         p.add_argument("--k_test", type=int, default=16)
         p.add_argument("--keep_first_sentences", type=int, default=0)
 
@@ -114,11 +121,21 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         p.add_argument("--lm_batch_size", type=int, default=4)
         p.add_argument("--no_fp16", action="store_true")
         p.add_argument("--device", type=str, default="cuda")
-        p.add_argument("--choices", type=str, default=" yes| no", help="pipe-separated choices; default yes/no with leading space")
+        p.add_argument(
+            "--choices",
+            type=str,
+            default=" yes| no",
+            help="pipe-separated choices; default yes/no with leading space",
+        )
 
         # Hidden-state encoder
         p.add_argument("--embed_layer", type=int, default=-1)
-        p.add_argument("--embed_mode", type=str, default="last", choices=["last","mean","mean_std"])
+        p.add_argument(
+            "--embed_mode",
+            type=str,
+            default="last",
+            choices=["last", "mean", "mean_std"],
+        )
         p.add_argument("--enc_batch_size", type=int, default=8)
 
         # Head training
@@ -130,7 +147,9 @@ class HFLLMHiddenStateOrderDistill(Recipe):
 
         # Output
         p.add_argument("--out", type=str, default="results.json")
-        p.add_argument("--verbose", action="store_true", help="Print stage/progress logs.")
+        p.add_argument(
+            "--verbose", action="store_true", help="Print stage/progress logs."
+        )
 
         args = p.parse_args(argv)
         ctx = self.build_context(args)
@@ -150,7 +169,9 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         use_fp16 = (not bool(args.no_fp16)) and device.startswith("cuda")
         # Prefer bf16 on modern GPUs; fallback to fp16.
         dtype = torch.bfloat16 if use_fp16 else torch.float32
-        if use_fp16 and (not torch.cuda.is_available() or not torch.cuda.is_bf16_supported()):
+        if use_fp16 and (
+            not torch.cuda.is_available() or not torch.cuda.is_bf16_supported()
+        ):
             dtype = torch.float16
 
         log(f"loading tokenizer/lm: name={args.lm_name} device={device}")
@@ -168,10 +189,14 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         log("moving lm to device...")
         model.to(device)
         model.eval()
-        log(f"loaded lm={args.lm_name} device={device} dtype={str(dtype).replace('torch.', '')}")
+        log(
+            f"loaded lm={args.lm_name} device={device} dtype={str(dtype).replace('torch.', '')}"
+        )
 
         # Load world
-        log(f"loading world dataset={args.dataset} n_train={args.n_train} n_test={args.n_test}")
+        log(
+            f"loading world dataset={args.dataset} n_train={args.n_train} n_test={args.n_test}"
+        )
         t_world = time.time()
         world_cfg = HFQADatasetAdapterConfig(
             dataset=args.dataset,
@@ -187,7 +212,6 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         log(f"world loaded in {time.time() - t_world:.1f}s")
         train_ex = data["train"]
         test_ex = data["test"]
-        y_train = np.array([int(ex["label"]) for ex in train_ex], dtype=np.int64)
         y_test = np.array([int(ex["label"]) for ex in test_ex], dtype=np.int64)
 
         # Symmetry: order (sentence permutation)
@@ -196,13 +220,27 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         # Build views
         k_train = int(args.k_train)
         k_test = int(args.k_test)
-        train_views = make_boolq_prompts(train_ex, symmetry=symmetry, global_seed=args.seed, k=k_train, keep_first_sentences=int(args.keep_first_sentences))
-        test_views = make_boolq_prompts(test_ex, symmetry=symmetry, global_seed=args.seed + 1, k=k_test, keep_first_sentences=int(args.keep_first_sentences))
+        train_views = make_boolq_prompts(
+            train_ex,
+            symmetry=symmetry,
+            global_seed=args.seed,
+            k=k_train,
+            keep_first_sentences=int(args.keep_first_sentences),
+        )
+        test_views = make_boolq_prompts(
+            test_ex,
+            symmetry=symmetry,
+            global_seed=args.seed + 1,
+            k=k_test,
+            keep_first_sentences=int(args.keep_first_sentences),
+        )
 
         # Teacher predictor (logits/choices)
         choices = [c for c in str(args.choices).split("|") if c != ""]
         if len(choices) < 2:
-            raise ValueError("--choices must contain at least 2 options separated by '|'")
+            raise ValueError(
+                "--choices must contain at least 2 options separated by '|'"
+            )
         teacher_cfg = HFCausalLMChoicePredictorConfig(
             model_name=args.lm_name,
             batch_size=int(args.lm_batch_size),
@@ -212,7 +250,9 @@ class HFLLMHiddenStateOrderDistill(Recipe):
             progress=bool(args.verbose),
         )
         teacher = HFCausalLMChoicePredictor(teacher_cfg, model=model, tok=tok)
-        log(f"teacher ready: choices={choices} bs={teacher_cfg.batch_size} max_len={teacher_cfg.max_length}")
+        log(
+            f"teacher ready: choices={choices} bs={teacher_cfg.batch_size} max_len={teacher_cfg.max_length}"
+        )
 
         # Hidden-state encoder
         enc_cfg = HFCausalLMEncoderConfig(
@@ -226,7 +266,9 @@ class HFLLMHiddenStateOrderDistill(Recipe):
             progress=bool(args.verbose),
         )
         encoder = HFCausalLMEncoder(enc_cfg, model=model, tok=tok)
-        log(f"encoder ready: layer={enc_cfg.layer} mode={enc_cfg.embed_mode} bs={enc_cfg.batch_size} max_len={enc_cfg.max_length}")
+        log(
+            f"encoder ready: layer={enc_cfg.layer} mode={enc_cfg.embed_mode} bs={enc_cfg.batch_size} max_len={enc_cfg.max_length}"
+        )
 
         world_fp = world.fingerprint()
         enc_fp = encoder.fingerprint()
@@ -235,16 +277,19 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         # shape: [N, K, C]
         def _score_views(views: List[List[str]], split: str) -> np.ndarray:
             from tqdm import tqdm
+
             N = len(views[0])
             K = len(views)
             C = len(choices)
             P = np.zeros((N, K, C), dtype=np.float32)
             for j in tqdm(range(K), desc=f"teacher {split}", disable=not args.verbose):
                 t0 = time.time()
-                log(f"teacher scoring split={split} view={j+1}/{K} n={N}")
+                log(f"teacher scoring split={split} view={j + 1}/{K} n={N}")
                 probs = teacher.predict_proba(views[j], choices=choices)  # [N,C]
                 P[:, j, :] = probs
-                log(f"teacher done split={split} view={j+1}/{K} in {time.time() - t0:.1f}s")
+                log(
+                    f"teacher done split={split} view={j + 1}/{K} in {time.time() - t0:.1f}s"
+                )
             return P
 
         log(f"scoring teacher views: k_train={k_train} k_test={k_test}")
@@ -253,11 +298,20 @@ class HFLLMHiddenStateOrderDistill(Recipe):
 
         # ---- Encode train views into hidden states (with caching per view) ----
         from tqdm import tqdm
+
         Z_train_views: List[np.ndarray] = []
-        for j in tqdm(range(k_train), desc="encode train views", disable=not args.verbose):
+        for j in tqdm(
+            range(k_train), desc="encode train views", disable=not args.verbose
+        ):
             tag = f"llm_hs_train_view{j}"
             if cache is not None:
-                key = cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split="train", tag=tag, extra={"k_train": k_train})
+                key = cache.make_key(
+                    world_fingerprint=world_fp,
+                    encoder_fingerprint=enc_fp,
+                    split="train",
+                    tag=tag,
+                    extra={"k_train": k_train},
+                )
                 got = cache.get(key)
                 if got is not None:
                     Zj, _meta = got
@@ -266,7 +320,9 @@ class HFLLMHiddenStateOrderDistill(Recipe):
                     t0 = time.time()
                     log(f"encoding {tag} n={len(train_views[j])}")
                     Zj = encoder.encode(train_views[j])
-                    log(f"encoded {tag} in {time.time() - t0:.1f}s shape={tuple(Zj.shape)}")
+                    log(
+                        f"encoded {tag} in {time.time() - t0:.1f}s shape={tuple(Zj.shape)}"
+                    )
                     cache.put(key, Zj, meta={"n": len(train_views[j]), "view": j})
             else:
                 t0 = time.time()
@@ -281,7 +337,13 @@ class HFLLMHiddenStateOrderDistill(Recipe):
 
         # Validation embeddings: use test view0
         if cache is not None:
-            key = cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split="test", tag="llm_hs_test_view0", extra={"k_test": k_test})
+            key = cache.make_key(
+                world_fingerprint=world_fp,
+                encoder_fingerprint=enc_fp,
+                split="test",
+                tag="llm_hs_test_view0",
+                extra={"k_test": k_test},
+            )
             got = cache.get(key)
             if got is not None:
                 Z_val, _meta = got
@@ -290,17 +352,28 @@ class HFLLMHiddenStateOrderDistill(Recipe):
                 t0 = time.time()
                 log(f"encoding llm_hs_test_view0 n={len(test_views[0])}")
                 Z_val = encoder.encode(test_views[0])
-                log(f"encoded llm_hs_test_view0 in {time.time() - t0:.1f}s shape={tuple(Z_val.shape)}")
+                log(
+                    f"encoded llm_hs_test_view0 in {time.time() - t0:.1f}s shape={tuple(Z_val.shape)}"
+                )
                 cache.put(key, Z_val, meta={"n": len(test_views[0]), "view": 0})
         else:
             t0 = time.time()
             log(f"encoding llm_hs_test_view0 n={len(test_views[0])}")
             Z_val = encoder.encode(test_views[0])
-            log(f"encoded llm_hs_test_view0 in {time.time() - t0:.1f}s shape={tuple(Z_val.shape)}")
+            log(
+                f"encoded llm_hs_test_view0 in {time.time() - t0:.1f}s shape={tuple(Z_val.shape)}"
+            )
 
         # Train head
-        log(f"training head: steps={args.train_steps} bs={args.train_bs} lr={args.train_lr}")
-        head_cfg = MLPHeadConfig(in_dim=int(Z_train.shape[1]), num_classes=len(choices), hidden=int(args.hidden), depth=int(args.depth))
+        log(
+            f"training head: steps={args.train_steps} bs={args.train_bs} lr={args.train_lr}"
+        )
+        head_cfg = MLPHeadConfig(
+            in_dim=int(Z_train.shape[1]),
+            num_classes=len(choices),
+            hidden=int(args.hidden),
+            depth=int(args.depth),
+        )
         head, head_metrics = train_soft_label_head(
             Z_train=Z_train,
             P_teacher=P_teacher_flat,
@@ -324,11 +397,19 @@ class HFLLMHiddenStateOrderDistill(Recipe):
 
         # Student: apply head to each view's hidden states
         P_stud_views_list: List[np.ndarray] = []
-        for j in tqdm(range(k_test), desc="encode test views", disable=not args.verbose):
+        for j in tqdm(
+            range(k_test), desc="encode test views", disable=not args.verbose
+        ):
             # cache per view
             tag = f"llm_hs_test_view{j}"
             if cache is not None:
-                key = cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split="test", tag=tag, extra={"k_test": k_test})
+                key = cache.make_key(
+                    world_fingerprint=world_fp,
+                    encoder_fingerprint=enc_fp,
+                    split="test",
+                    tag=tag,
+                    extra={"k_test": k_test},
+                )
                 got = cache.get(key)
                 if got is not None:
                     Zj, _meta = got
@@ -337,7 +418,9 @@ class HFLLMHiddenStateOrderDistill(Recipe):
                     t0 = time.time()
                     log(f"encoding {tag} n={len(test_views[j])}")
                     Zj = encoder.encode(test_views[j])
-                    log(f"encoded {tag} in {time.time() - t0:.1f}s shape={tuple(Zj.shape)}")
+                    log(
+                        f"encoded {tag} in {time.time() - t0:.1f}s shape={tuple(Zj.shape)}"
+                    )
                     cache.put(key, Zj, meta={"n": len(test_views[j]), "view": j})
             else:
                 t0 = time.time()
@@ -410,8 +493,23 @@ class HFLLMHiddenStateOrderDistill(Recipe):
         # simple diagnostic plot (reuses text_distill plot expectations)
         try:
             fig_path = out_dir / "diagnostics.png"
-            plot_text_order_distill({"baseline": {"acc": summary["baseline"]["acc"], "gap_mean_tv_to_mean": summary["baseline"]["gap_mean_tv_to_mean"]},
-                                     "student": {"acc": summary["student"]["acc"], "gap_mean_tv_to_mean": summary["student"]["gap_mean_tv_to_mean"]}}, fig_path)
+            plot_text_order_distill(
+                {
+                    "baseline": {
+                        "acc": summary["baseline"]["acc"],
+                        "gap_mean_tv_to_mean": summary["baseline"][
+                            "gap_mean_tv_to_mean"
+                        ],
+                    },
+                    "student": {
+                        "acc": summary["student"]["acc"],
+                        "gap_mean_tv_to_mean": summary["student"][
+                            "gap_mean_tv_to_mean"
+                        ],
+                    },
+                },
+                fig_path,
+            )
         except Exception:
             pass
 

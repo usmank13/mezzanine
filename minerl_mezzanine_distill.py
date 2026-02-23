@@ -35,7 +35,7 @@ import time
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -47,6 +47,7 @@ from tqdm import tqdm
 # -----------------------------
 # MineRL dataset compatibility
 # -----------------------------
+
 
 def _load_minerl_data() -> Any:
     try:
@@ -68,13 +69,19 @@ def _maybe_add_mezzanine_to_path() -> None:
     """Best-effort: if a 'mezzanine' package isn't importable, look for a sibling repo."""
     try:
         import mezzanine  # noqa: F401
+
         return
     except Exception:
         pass
 
     # Common layouts: repo root contains mezzanine/ package.
     here = Path(__file__).resolve().parent
-    candidates = [here, here / "mezzanine_repo", here / "mezzanine_merged_repo", here / ".." / "mezzanine"]
+    candidates = [
+        here,
+        here / "mezzanine_repo",
+        here / "mezzanine_merged_repo",
+        here / ".." / "mezzanine",
+    ]
     for c in candidates:
         if (c / "mezzanine").exists():
             sys.path.insert(0, str(c))
@@ -219,9 +226,15 @@ def _download_file(url: str, out_path: Path, *, overwrite: bool = False) -> None
     print(f"[setup-vpt] downloading: {url} -> {out_path}")
     with urllib.request.urlopen(url) as resp:
         total = int(resp.headers.get("Content-Length", "0"))
-        with open(out_path, "wb") as f, tqdm(
-            total=total if total > 0 else None, unit="B", unit_scale=True, desc=out_path.name
-        ) as pbar:
+        with (
+            open(out_path, "wb") as f,
+            tqdm(
+                total=total if total > 0 else None,
+                unit="B",
+                unit_scale=True,
+                desc=out_path.name,
+            ) as pbar,
+        ):
             while True:
                 chunk = resp.read(1024 * 1024)
                 if not chunk:
@@ -231,7 +244,13 @@ def _download_file(url: str, out_path: Path, *, overwrite: bool = False) -> None
                     pbar.update(len(chunk))
 
 
-def setup_vpt_assets(out_dir: str, variant: str, model_url: Optional[str], weights_url: Optional[str], overwrite: bool) -> Tuple[Path, Path]:
+def setup_vpt_assets(
+    out_dir: str,
+    variant: str,
+    model_url: Optional[str],
+    weights_url: Optional[str],
+    overwrite: bool,
+) -> Tuple[Path, Path]:
     if variant not in VPT_MODEL_URLS:
         raise ValueError(f"Unknown variant: {variant}")
     out_dir_p = Path(out_dir)
@@ -247,7 +266,9 @@ def setup_vpt_assets(out_dir: str, variant: str, model_url: Optional[str], weigh
     return model_path, weights_path
 
 
-def resolve_vpt_paths(vpt_dir: str, variant: str, vpt_model: Optional[str], vpt_weights: Optional[str]) -> Tuple[str, str]:
+def resolve_vpt_paths(
+    vpt_dir: str, variant: str, vpt_model: Optional[str], vpt_weights: Optional[str]
+) -> Tuple[str, str]:
     if vpt_model and vpt_weights:
         return vpt_model, vpt_weights
     if variant not in VPT_MODEL_FILES:
@@ -294,8 +315,14 @@ class RewardHead(nn.Module):
 class VPTTeacher(nn.Module):
     def __init__(self, model_path: str, weights_path: str, device: str):
         super().__init__()
-        if MinecraftAgentPolicy is None or ActionTransformer is None or CameraHierarchicalMapping is None:
-            raise RuntimeError("VPT repo not available. Set VPT_REPO or clone Video-Pre-Training.")
+        if (
+            MinecraftAgentPolicy is None
+            or ActionTransformer is None
+            or CameraHierarchicalMapping is None
+        ):
+            raise RuntimeError(
+                "VPT repo not available. Set VPT_REPO or clone Video-Pre-Training."
+            )
 
         self.device = torch.device(device)
 
@@ -307,12 +334,20 @@ class VPTTeacher(nn.Module):
 
         self.action_mapper = CameraHierarchicalMapping(n_camera_bins=11)
         action_space = self.action_mapper.get_action_space_update()
-        from gym3.types import DictType  # imported lazily to avoid gym3 at module import
+        from gym3.types import (
+            DictType,
+        )  # imported lazily to avoid gym3 at module import
 
         action_space = DictType(**action_space)
 
-        self.policy = MinecraftAgentPolicy(action_space=action_space, policy_kwargs=policy_kwargs, pi_head_kwargs=pi_head_kwargs).to(self.device)
-        self.policy.load_state_dict(torch.load(weights_path, map_location=self.device), strict=False)
+        self.policy = MinecraftAgentPolicy(
+            action_space=action_space,
+            policy_kwargs=policy_kwargs,
+            pi_head_kwargs=pi_head_kwargs,
+        ).to(self.device)
+        self.policy.load_state_dict(
+            torch.load(weights_path, map_location=self.device), strict=False
+        )
         self.policy.eval()
         for p in self.policy.parameters():
             p.requires_grad = False
@@ -326,10 +361,16 @@ class VPTTeacher(nn.Module):
             "camera_quantization_scheme": "mu_law",
         }
         self.action_transformer = ActionTransformer(**transformer_kwargs)
-        self.n_camera_bins = int((transformer_kwargs["camera_maxval"] / transformer_kwargs["camera_binsize"]) * 2 + 1)
+        self.n_camera_bins = int(
+            (transformer_kwargs["camera_maxval"] / transformer_kwargs["camera_binsize"])
+            * 2
+            + 1
+        )
         self.num_actions = self.n_camera_bins * self.n_camera_bins
 
-        self.action_emb = nn.Embedding(self.num_actions, self.latent_dim).to(self.device)
+        self.action_emb = nn.Embedding(self.num_actions, self.latent_dim).to(
+            self.device
+        )
         self.reward_head = RewardHead(self.latent_dim).to(self.device)
 
     def _set_dropout(self, enable: bool) -> None:
@@ -338,21 +379,31 @@ class VPTTeacher(nn.Module):
         else:
             self.policy.eval()
 
-    def _resize_obs(self, obs_uint8: torch.Tensor, target_hw: int = 128) -> torch.Tensor:
+    def _resize_obs(
+        self, obs_uint8: torch.Tensor, target_hw: int = 128
+    ) -> torch.Tensor:
         # obs_uint8: (B,T,H,W,C)
         b, t, h, w, c = obs_uint8.shape
         obs_f = obs_uint8.float().permute(0, 1, 4, 2, 3).reshape(b * t, c, h, w)
-        obs_r = F.interpolate(obs_f, size=(target_hw, target_hw), mode="bilinear", align_corners=False)
+        obs_r = F.interpolate(
+            obs_f, size=(target_hw, target_hw), mode="bilinear", align_corners=False
+        )
         obs_r = obs_r.reshape(b, t, c, target_hw, target_hw).permute(0, 1, 3, 4, 2)
         return obs_r
 
-    def _forward_seq(self, obs_seq: torch.Tensor, state_in: Any, first: torch.Tensor) -> Tuple[torch.Tensor, Any]:
+    def _forward_seq(
+        self, obs_seq: torch.Tensor, state_in: Any, first: torch.Tensor
+    ) -> Tuple[torch.Tensor, Any]:
         obs = {"img": obs_seq}
-        (pi_latent, _), state_out = self.policy.net(obs, state_in, context={"first": first})
+        (pi_latent, _), state_out = self.policy.net(
+            obs, state_in, context={"first": first}
+        )
         return pi_latent, state_out
 
     @torch.no_grad()
-    def infer_posterior(self, obs_uint8: torch.Tensor, act_idx: torch.Tensor, *, sample: bool = True) -> VPTState:
+    def infer_posterior(
+        self, obs_uint8: torch.Tensor, act_idx: torch.Tensor, *, sample: bool = True
+    ) -> VPTState:
         # act_idx unused; kept for interface compatibility
         self._set_dropout(sample)
         obs = self._resize_obs(obs_uint8.to(self.device))
@@ -366,7 +417,9 @@ class VPTTeacher(nn.Module):
         return VPTState(latent=latent, state=state_out, last_obs=last_obs)
 
     @torch.no_grad()
-    def imagine_rollout(self, start: VPTState, future_act: torch.Tensor, *, sample: bool = True) -> torch.Tensor:
+    def imagine_rollout(
+        self, start: VPTState, future_act: torch.Tensor, *, sample: bool = True
+    ) -> torch.Tensor:
         # VPT is observation-conditioned; we roll forward using the last observation.
         self._set_dropout(sample)
         b, h = future_act.shape
@@ -377,7 +430,12 @@ class VPTTeacher(nn.Module):
 
     def repeat_state(self, start: VPTState, repeats: int) -> VPTState:
         if tree_map is not None:
-            state_rep = tree_map(lambda x: x.repeat_interleave(repeats, dim=0) if torch.is_tensor(x) else x, start.state)
+            state_rep = tree_map(
+                lambda x: (
+                    x.repeat_interleave(repeats, dim=0) if torch.is_tensor(x) else x
+                ),
+                start.state,
+            )
         else:
             state_rep = _repeat_tree(start.state, repeats)
         return VPTState(
@@ -448,7 +506,9 @@ def perturb_obs(
         arr *= scale
     # Additive gaussian noise
     if gaussian_noise > 0:
-        arr += rng.normal(0.0, gaussian_noise * 255.0, size=arr.shape).astype(np.float32)
+        arr += rng.normal(0.0, gaussian_noise * 255.0, size=arr.shape).astype(
+            np.float32
+        )
     arr = np.clip(arr, 0, 255).astype(np.uint8)
     return arr
 
@@ -458,7 +518,9 @@ def perturb_obs(
 # -----------------------------
 
 
-def action_to_vpt_index(action: Dict[str, Any], action_transformer: ActionTransformer, n_bins: int) -> int:
+def action_to_vpt_index(
+    action: Dict[str, Any], action_transformer: ActionTransformer, n_bins: int
+) -> int:
     cam = action.get("camera", np.array([0.0, 0.0], dtype=np.float32))
     cam = np.asarray(cam, dtype=np.float32)
     cam_bin = action_transformer.discretize_camera(cam)
@@ -466,7 +528,9 @@ def action_to_vpt_index(action: Dict[str, Any], action_transformer: ActionTransf
     return int(cam_bin[0]) * n_bins + int(cam_bin[1])
 
 
-def vpt_index_to_env_action(idx: int, action_transformer: ActionTransformer, n_bins: int) -> Dict[str, Any]:
+def vpt_index_to_env_action(
+    idx: int, action_transformer: ActionTransformer, n_bins: int
+) -> Dict[str, Any]:
     if Buttons is None:
         raise RuntimeError("VPT Buttons enum not available; check VPT repo.")
     x = int(idx) // n_bins
@@ -647,7 +711,9 @@ def distill_student(
     if student_cfg.horizon != data_cfg.horizon:
         raise ValueError("student_cfg.horizon must match data_cfg.horizon")
 
-    student = StudentFFTrajectory(latent_dim=latent_dim, num_actions=teacher.num_actions, cfg=student_cfg).to(device)
+    student = StudentFFTrajectory(
+        latent_dim=latent_dim, num_actions=teacher.num_actions, cfg=student_cfg
+    ).to(device)
     reward_head = teacher.reward_head
     opt = torch.optim.AdamW(
         list(student.parameters()) + list(reward_head.parameters()),
@@ -659,7 +725,6 @@ def distill_student(
     device_t = torch.device(device)
 
     # Streaming windows
-    T = data_cfg.context + data_cfg.horizon
     win_it = iterate_windows(
         data,
         traj_names,
@@ -740,7 +805,9 @@ def distill_student(
             for v_i in range(v):
                 st = teacher.infer_posterior(obs_var[:, v_i], act_hist, sample=True)
                 cur_states.append(st)
-                feats = teacher.imagine_rollout(st, act_fut_var[:, v_i], sample=True)  # (B,H,D)
+                feats = teacher.imagine_rollout(
+                    st, act_fut_var[:, v_i], sample=True
+                )  # (B,H,D)
                 fut_feats.append(feats)
             cur_feat = torch.stack([s.feat() for s in cur_states], dim=1)  # (B,V,D)
             fut_feats = torch.stack(fut_feats, dim=1)  # (B,V,H,D)
@@ -761,7 +828,11 @@ def distill_student(
         reward_pred = reward_head(tgt).view(b, h)
         loss_rew = F.mse_loss(reward_pred, rew_fut, reduction="mean")
 
-        loss = loss_fit + student_cfg.beta_var * loss_var + student_cfg.reward_weight * loss_rew
+        loss = (
+            loss_fit
+            + student_cfg.beta_var * loss_var
+            + student_cfg.reward_weight * loss_rew
+        )
 
         opt.zero_grad(set_to_none=True)
         loss.backward()
@@ -800,10 +871,16 @@ def distill_student(
     print(f"[distill] wrote: {out_path}")
 
 
-def load_student(student_path: str, device: str) -> Tuple[StudentFFTrajectory, Optional[RewardHead], StudentConfig]:
+def load_student(
+    student_path: str, device: str
+) -> Tuple[StudentFFTrajectory, Optional[RewardHead], StudentConfig]:
     ckpt = torch.load(student_path, map_location=device)
     cfg = StudentConfig(**ckpt["student_cfg"])
-    model = StudentFFTrajectory(latent_dim=int(ckpt["latent_dim"]), num_actions=int(ckpt["num_actions"]), cfg=cfg).to(device)
+    model = StudentFFTrajectory(
+        latent_dim=int(ckpt["latent_dim"]),
+        num_actions=int(ckpt["num_actions"]),
+        cfg=cfg,
+    ).to(device)
     model.load_state_dict(ckpt["model"], strict=True)
     model.eval()
 
@@ -950,7 +1027,9 @@ def eval_make_break(
         student_var = pred.var(dim=1).mean(dim=(1, 2))
 
         # Fidelity (cosine) to teacher mean at final step.
-        cos = cosine_sim(student_mean[:, -1], teacher_mean[:, -1]).detach().cpu().numpy()
+        cos = (
+            cosine_sim(student_mean[:, -1], teacher_mean[:, -1]).detach().cpu().numpy()
+        )
 
         var_teacher_list.append(teacher_var.detach().cpu().numpy())
         var_student_list.append(student_var.detach().cpu().numpy())
@@ -986,8 +1065,19 @@ def eval_make_break(
             act_fut = act[:, cfg.context : cfg.context + cfg.horizon].contiguous()
 
             st = teacher.infer_posterior(obs_hist, act_hist, sample=False)
-            ztp = teacher.imagine_rollout(st, act_fut, sample=False).detach().cpu().numpy()[:, -1]
-            aemb = teacher.action_emb(act_fut).detach().cpu().numpy().reshape(act_fut.shape[0], -1)
+            ztp = (
+                teacher.imagine_rollout(st, act_fut, sample=False)
+                .detach()
+                .cpu()
+                .numpy()[:, -1]
+            )
+            aemb = (
+                teacher.action_emb(act_fut)
+                .detach()
+                .cpu()
+                .numpy()
+                .reshape(act_fut.shape[0], -1)
+            )
 
             zt_arr.append(st.feat().detach().cpu().numpy())
             ztp_arr.append(ztp)
@@ -1003,8 +1093,12 @@ def eval_make_break(
             a_arr = np.concatenate(a_arr)
 
             ld_cfg = LatentDynamicsTrainConfig()  # type: ignore
-            models = train_latent_dynamics(zt_arr, ztp_arr, a_arr, ld_cfg, device=str(device_t))
-            mezz_metrics = eval_latent_dynamics(models, zt_arr, ztp_arr, a_arr, device=str(device_t), seed=0)
+            models = train_latent_dynamics(
+                zt_arr, ztp_arr, a_arr, ld_cfg, device=str(device_t)
+            )
+            mezz_metrics = eval_latent_dynamics(
+                models, zt_arr, ztp_arr, a_arr, device=str(device_t), seed=0
+            )
 
     rep = {
         "cos_mean": cos_mean,
@@ -1014,7 +1108,11 @@ def eval_make_break(
         "teacher_seconds": t_teacher,
         "student_seconds": t_student,
         "speedup": speedup,
-        "make": bool(cos_mean >= cfg.min_cos and var_reduction >= cfg.min_var_reduction and speedup >= cfg.min_speedup),
+        "make": bool(
+            cos_mean >= cfg.min_cos
+            and var_reduction >= cfg.min_var_reduction
+            and speedup >= cfg.min_speedup
+        ),
         "thresholds": {
             "min_cos": cfg.min_cos,
             "min_var_reduction": cfg.min_var_reduction,
@@ -1045,8 +1143,9 @@ def _make_env(env_id: str):
     # MineRL typically uses gym; newer stacks may use gymnasium.
     try:
         import gym  # type: ignore
+
         try:
-            import minerl  # type: ignore  # registers MineRL envs with gym
+            import minerl  # type: ignore  # noqa: F401  # registers MineRL envs with gym
         except Exception:
             pass
         return gym.make(env_id)
@@ -1073,7 +1172,11 @@ def plan_episode(
     """
     set_seed(cfg.seed)
     teacher = VPTTeacher(vpt_model, vpt_weights, device=device)
-    student, reward_head, student_cfg = load_student(student_path, device=device) if student_path else (None, None, None)
+    student, reward_head, student_cfg = (
+        load_student(student_path, device=device)
+        if student_path
+        else (None, None, None)
+    )
     if reward_head is not None:
         teacher.reward_head = reward_head
     if cfg.mode == "student" and student is None:
@@ -1118,20 +1221,28 @@ def plan_episode(
 
         if cfg.mode == "teacher":
             start_rep = teacher.repeat_state(st, cand)
-            feats = teacher.imagine_rollout(start_rep, act_cand, sample=True)  # (cand,H,D)
+            feats = teacher.imagine_rollout(
+                start_rep, act_cand, sample=True
+            )  # (cand,H,D)
         else:
             latent_rep = st.feat().repeat(cand, 1)
             assert student is not None
             feats = student(latent_rep, act_cand)  # (cand,H,D)
 
         # Reward prediction on imagined features.
-        r = teacher.reward_head(feats.reshape(-1, feats.shape[-1])).view(cand, cfg.horizon)
-        discounts = (cfg.gamma ** torch.arange(cfg.horizon, device=device_t).float())[None, :]
+        r = teacher.reward_head(feats.reshape(-1, feats.shape[-1])).view(
+            cand, cfg.horizon
+        )
+        discounts = (cfg.gamma ** torch.arange(cfg.horizon, device=device_t).float())[
+            None, :
+        ]
         ret = (r * discounts).sum(dim=1)
 
         best = int(torch.argmax(ret).item())
         a0 = int(act_cand[best, 0].item())
-        action = vpt_index_to_env_action(a0, teacher.action_transformer, teacher.n_camera_bins)
+        action = vpt_index_to_env_action(
+            a0, teacher.action_transformer, teacher.n_camera_bins
+        )
 
         step_out = env.step(action)
         if len(step_out) == 4:
@@ -1170,7 +1281,9 @@ def _parse_args() -> argparse.Namespace:
     p_setup.add_argument("--weights-url", default=None)
     p_setup.add_argument("--overwrite", action="store_true")
 
-    p_ds = sub.add_parser("distill", help="Distill feed-forward student with nuisance marginalization")
+    p_ds = sub.add_parser(
+        "distill", help="Distill feed-forward student with nuisance marginalization"
+    )
     p_ds.add_argument("--data-dir", required=True)
     p_ds.add_argument("--vpt-dir", default="vpt")
     p_ds.add_argument("--vpt-variant", choices=["1x", "2x", "3x"], default="2x")
@@ -1178,7 +1291,9 @@ def _parse_args() -> argparse.Namespace:
     p_ds.add_argument("--vpt-weights", default=None)
     p_ds.add_argument("--out", default="student.pt")
     p_ds.add_argument("--env", default=None)
-    p_ds.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p_ds.add_argument(
+        "--device", default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     p_ds.add_argument("--context", type=int, default=8)
     p_ds.add_argument("--horizon", type=int, default=8)
     p_ds.add_argument("--steps", type=int, default=40_000)
@@ -1195,7 +1310,9 @@ def _parse_args() -> argparse.Namespace:
     p_ev.add_argument("--vpt-weights", default=None)
     p_ev.add_argument("--student", required=True)
     p_ev.add_argument("--env", default=None)
-    p_ev.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p_ev.add_argument(
+        "--device", default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     p_ev.add_argument("--context", type=int, default=8)
     p_ev.add_argument("--horizon", type=int, default=8)
     p_ev.add_argument("--windows", type=int, default=2000)
@@ -1208,7 +1325,9 @@ def _parse_args() -> argparse.Namespace:
     p_ev.add_argument("--min-speedup", type=float, default=3.0)
     p_ev.add_argument("--json-out", default=None)
 
-    p_pl = sub.add_parser("plan", help="Online planner demo (requires MineRL env installed)")
+    p_pl = sub.add_parser(
+        "plan", help="Online planner demo (requires MineRL env installed)"
+    )
     p_pl.add_argument("--env", default=None)
     p_pl.add_argument("--vpt-dir", default="vpt")
     p_pl.add_argument("--vpt-variant", choices=["1x", "2x", "3x"], default="2x")
@@ -1216,7 +1335,9 @@ def _parse_args() -> argparse.Namespace:
     p_pl.add_argument("--vpt-weights", default=None)
     p_pl.add_argument("--student", default=None)
     p_pl.add_argument("--mode", choices=["student", "teacher"], default="student")
-    p_pl.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p_pl.add_argument(
+        "--device", default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     p_pl.add_argument("--context", type=int, default=8)
     p_pl.add_argument("--horizon", type=int, default=8)
     p_pl.add_argument("--candidates", type=int, default=1024)
@@ -1243,7 +1364,9 @@ def main() -> None:
         return
 
     if args.cmd == "distill":
-        vpt_model, vpt_weights = resolve_vpt_paths(args.vpt_dir, args.vpt_variant, args.vpt_model, args.vpt_weights)
+        vpt_model, vpt_weights = resolve_vpt_paths(
+            args.vpt_dir, args.vpt_variant, args.vpt_model, args.vpt_weights
+        )
         student_cfg = StudentConfig(
             horizon=args.horizon,
             steps=args.steps,
@@ -1270,7 +1393,9 @@ def main() -> None:
         return
 
     if args.cmd == "eval":
-        vpt_model, vpt_weights = resolve_vpt_paths(args.vpt_dir, args.vpt_variant, args.vpt_model, args.vpt_weights)
+        vpt_model, vpt_weights = resolve_vpt_paths(
+            args.vpt_dir, args.vpt_variant, args.vpt_model, args.vpt_weights
+        )
         cfg = EvalConfig(
             context=args.context,
             horizon=args.horizon,
@@ -1300,7 +1425,9 @@ def main() -> None:
         return
 
     if args.cmd == "plan":
-        vpt_model, vpt_weights = resolve_vpt_paths(args.vpt_dir, args.vpt_variant, args.vpt_model, args.vpt_weights)
+        vpt_model, vpt_weights = resolve_vpt_paths(
+            args.vpt_dir, args.vpt_variant, args.vpt_model, args.vpt_weights
+        )
         cfg = PlanConfig(
             context=args.context,
             horizon=args.horizon,

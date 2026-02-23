@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 import numpy as np
 import torch
 from transformers import AutoModel, AutoTokenizer
 
 from ..core.cache import hash_dict
+from ..registry import ENCODERS
 from .base import Encoder
 
 TextPool = Literal["cls", "mean"]
@@ -55,7 +56,7 @@ class HFLanguageEncoder(Encoder):
 
         i = 0
         while i < len(texts):
-            chunk = texts[i:i+bs]
+            chunk = texts[i : i + bs]
             inp = self.tok(
                 chunk,
                 return_tensors="pt",
@@ -65,7 +66,9 @@ class HFLanguageEncoder(Encoder):
             )
             inp = {k: v.to(self.device) for k, v in inp.items()}
             with torch.no_grad():
-                with torch.amp.autocast("cuda", enabled=(self.cfg.fp16 and self.device.startswith("cuda"))):
+                with torch.amp.autocast(
+                    "cuda", enabled=(self.cfg.fp16 and self.device.startswith("cuda"))
+                ):
                     o = self.model(**inp, output_hidden_states=True)
                     h = o.hidden_states[self.cfg.layer]  # [B,T,D]
                     if self.cfg.pool == "cls":
@@ -88,5 +91,4 @@ class HFLanguageEncoder(Encoder):
 
 
 # Register
-from ..registry import ENCODERS
-ENCODERS.register('hf_language')( HFLanguageEncoder )
+ENCODERS.register("hf_language")(HFLanguageEncoder)

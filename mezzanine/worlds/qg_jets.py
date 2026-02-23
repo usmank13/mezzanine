@@ -41,10 +41,15 @@ class QGJetsAdapterConfig:
     seed: int = 0
 
 
-@ADAPTERS.register("qg_jets_energyflow", description="Quark/gluon jets from EnergyFlow (Pythia/Herwig), padded particle clouds.")
+@ADAPTERS.register(
+    "qg_jets_energyflow",
+    description="Quark/gluon jets from EnergyFlow (Pythia/Herwig), padded particle clouds.",
+)
 class QGJetsAdapter(WorldAdapter):
     NAME = "qg_jets_energyflow"
-    DESCRIPTION = "Quark/gluon jets from EnergyFlow (Pythia/Herwig), padded particle clouds."
+    DESCRIPTION = (
+        "Quark/gluon jets from EnergyFlow (Pythia/Herwig), padded particle clouds."
+    )
 
     def __init__(self, cfg: QGJetsAdapterConfig):
         self.cfg = cfg
@@ -82,7 +87,9 @@ class QGJetsAdapter(WorldAdapter):
 
         N = int(X.shape[0])
         if N != int(y.shape[0]):
-            raise RuntimeError(f"EnergyFlow returned mismatched shapes: X={X.shape}, y={y.shape}")
+            raise RuntimeError(
+                f"EnergyFlow returned mismatched shapes: X={X.shape}, y={y.shape}"
+            )
 
         n_train = int(self.cfg.n_train)
         n_test = int(self.cfg.n_test)
@@ -90,14 +97,14 @@ class QGJetsAdapter(WorldAdapter):
             raise ValueError("n_train and n_test must be positive")
         if n_train + n_test > N:
             raise ValueError(
-                f"Requested n_train+n_test={n_train+n_test} but only have N={N}. "
+                f"Requested n_train+n_test={n_train + n_test} but only have N={N}. "
                 "Increase num_data or reduce n_train/n_test."
             )
 
         rng = np.random.default_rng(int(self.cfg.seed))
         idx = rng.permutation(N)
         idx_tr = idx[:n_train]
-        idx_te = idx[n_train:n_train + n_test]
+        idx_te = idx[n_train : n_train + n_test]
 
         def make_examples(idxs: np.ndarray) -> List[Dict[str, Any]]:
             out: List[Dict[str, Any]] = []

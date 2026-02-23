@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from ..core.cache import hash_dict
 from ..core.deterministic import deterministic_subsample_indices
+from ..registry import ADAPTERS
 from .base import WorldAdapter
 
 
@@ -14,6 +15,7 @@ class HFQADatasetAdapterConfig:
 
     Designed for lightweight LLM distillation recipes (e.g., BoolQ).
     """
+
     dataset: str = "boolq"
     subset: Optional[str] = None
     train_split: str = "train"
@@ -40,14 +42,24 @@ class HFQADatasetAdapter(WorldAdapter):
         try:
             from datasets import load_dataset  # type: ignore
         except Exception as e:
-            raise RuntimeError("HF QA adapter requires `datasets`. Install: pip install mezzanine[datasets]") from e
+            raise RuntimeError(
+                "HF QA adapter requires `datasets`. Install: pip install mezzanine[datasets]"
+            ) from e
 
-        ds = load_dataset(self.cfg.dataset, self.cfg.subset) if self.cfg.subset else load_dataset(self.cfg.dataset)
+        ds = (
+            load_dataset(self.cfg.dataset, self.cfg.subset)
+            if self.cfg.subset
+            else load_dataset(self.cfg.dataset)
+        )
         train = ds[self.cfg.train_split]
         test = ds[self.cfg.test_split]
 
-        tr_idx = deterministic_subsample_indices(len(train), min(self.cfg.n_train, len(train)), self.cfg.seed)
-        te_idx = deterministic_subsample_indices(len(test), min(self.cfg.n_test, len(test)), self.cfg.seed + 1)
+        tr_idx = deterministic_subsample_indices(
+            len(train), min(self.cfg.n_train, len(train)), self.cfg.seed
+        )
+        te_idx = deterministic_subsample_indices(
+            len(test), min(self.cfg.n_test, len(test)), self.cfg.seed + 1
+        )
 
         def _ex(row: Any) -> Dict[str, Any]:
             passage = row[self.cfg.passage_field]
@@ -77,8 +89,12 @@ class HFQADatasetAdapter(WorldAdapter):
         }
         try:
             sample = train_ex[0]
-            import hashlib, json as _json
-            meta["sample_sha256_first"] = hashlib.sha256(_json.dumps(sample, sort_keys=True).encode("utf-8")).hexdigest()
+            import hashlib
+            import json as _json
+
+            meta["sample_sha256_first"] = hashlib.sha256(
+                _json.dumps(sample, sort_keys=True).encode("utf-8")
+            ).hexdigest()
         except Exception:
             pass
 
@@ -86,5 +102,4 @@ class HFQADatasetAdapter(WorldAdapter):
 
 
 # Register
-from ..registry import ADAPTERS
 ADAPTERS.register("hf_qa")(HFQADatasetAdapter)

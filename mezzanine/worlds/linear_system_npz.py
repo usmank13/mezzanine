@@ -74,7 +74,9 @@ class LinearSystemNPZAdapter(WorldAdapter):
         }
         return json.dumps(fp, sort_keys=True)
 
-    def _build_split(self, split: str, n_target: int, seed: int) -> List[Dict[str, Any]]:
+    def _build_split(
+        self, split: str, n_target: int, seed: int
+    ) -> List[Dict[str, Any]]:
         A = self._data[f"{split}_A"].astype(np.float32)
         b = self._data[f"{split}_b"].astype(np.float32)
         x = self._data[f"{split}_x"].astype(np.float32)
@@ -82,7 +84,9 @@ class LinearSystemNPZAdapter(WorldAdapter):
         if A.ndim != 3:
             raise ValueError(f"{split}_A must be [N,n,n], got {A.shape}")
         if b.ndim != 2 or x.ndim != 2:
-            raise ValueError(f"{split}_b and {split}_x must be [N,n], got {b.shape}, {x.shape}")
+            raise ValueError(
+                f"{split}_b and {split}_x must be [N,n], got {b.shape}, {x.shape}"
+            )
         if not (A.shape[0] == b.shape[0] == x.shape[0]):
             raise ValueError("Mismatched N across A,b,x")
         if not (A.shape[1] == A.shape[2] == b.shape[1] == x.shape[1]):
@@ -96,7 +100,11 @@ class LinearSystemNPZAdapter(WorldAdapter):
 
         n_total = A.shape[0]
         n_take = min(int(n_target), int(n_total))
-        idxs = deterministic_subsample_indices(n_total, n_take, seed) if n_take > 0 else np.array([], dtype=np.int64)
+        idxs = (
+            deterministic_subsample_indices(n_total, n_take, seed)
+            if n_take > 0
+            else np.array([], dtype=np.int64)
+        )
 
         out: List[Dict[str, Any]] = []
         for i in idxs:
@@ -107,7 +115,11 @@ class LinearSystemNPZAdapter(WorldAdapter):
     def load(self) -> Dict[str, Any]:
         train = self._build_split("train", self.config.n_train, self.config.seed)
         test = self._build_split("test", self.config.n_test, self.config.seed + 1)
-        n = int(train[0]["A"].shape[0]) if train else (int(test[0]["A"].shape[0]) if test else 0)
+        n = (
+            int(train[0]["A"].shape[0])
+            if train
+            else (int(test[0]["A"].shape[0]) if test else 0)
+        )
         return {
             "train": train,
             "test": test,

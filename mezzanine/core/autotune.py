@@ -69,5 +69,13 @@ class AutoTuner:
                 best_cfg = dict(cfg)
 
         if best_cfg is None:
-            return AutoTuneResult(best_config=None, trials=trials, reason="No candidates met baseline_range")
-        return AutoTuneResult(best_config=best_cfg, trials=trials, reason="Selected by effect among candidates in range")
+            return AutoTuneResult(
+                best_config=None,
+                trials=trials,
+                reason="No candidates met baseline_range",
+            )
+        return AutoTuneResult(
+            best_config=best_cfg,
+            trials=trials,
+            reason="Selected by effect among candidates in range",
+        )

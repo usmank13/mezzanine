@@ -55,7 +55,9 @@ def _load_npz(path: Path) -> Dict[str, np.ndarray]:
 @ADAPTERS.register("kepler_root_npz")
 class KeplerRootNPZAdapter(WorldAdapter):
     NAME = "kepler_root_npz"
-    DESCRIPTION = "Kepler root-finding dataset (e,M)->E targets for symmetry distillation."
+    DESCRIPTION = (
+        "Kepler root-finding dataset (e,M)->E targets for symmetry distillation."
+    )
 
     def __init__(self, config: KeplerRootNPZAdapterConfig):
         config.validate()
@@ -75,19 +77,25 @@ class KeplerRootNPZAdapter(WorldAdapter):
         }
         return json.dumps(fp, sort_keys=True)
 
-    def _build_split(self, split: str, n_target: int, seed: int) -> List[Dict[str, Any]]:
+    def _build_split(
+        self, split: str, n_target: int, seed: int
+    ) -> List[Dict[str, Any]]:
         e = self._data[f"{split}_e"].astype(np.float32)
         M = self._data[f"{split}_M"].astype(np.float32)
         y = self._data.get(f"{split}_y", None)
         if y is None:
-            raise KeyError(f"Missing {split}_y in {self.path}. Expected target [sinE, cosE].")
+            raise KeyError(
+                f"Missing {split}_y in {self.path}. Expected target [sinE, cosE]."
+            )
         y = y.astype(np.float32)
         E = self._data.get(f"{split}_E", None)
         if E is not None:
             E = E.astype(np.float32)
 
         if e.ndim != 1 or M.ndim != 1:
-            raise ValueError(f"{split}_e and {split}_M must be 1D, got {e.shape}, {M.shape}")
+            raise ValueError(
+                f"{split}_e and {split}_M must be 1D, got {e.shape}, {M.shape}"
+            )
         if y.ndim != 2 or y.shape[1] != 2:
             raise ValueError(f"{split}_y must be [N,2], got {y.shape}")
         if not (len(e) == len(M) == len(y)):
@@ -95,7 +103,11 @@ class KeplerRootNPZAdapter(WorldAdapter):
 
         n_total = len(e)
         n_take = min(int(n_target), int(n_total))
-        idxs = deterministic_subsample_indices(n_total, n_take, seed) if n_take > 0 else np.array([], dtype=np.int64)
+        idxs = (
+            deterministic_subsample_indices(n_total, n_take, seed)
+            if n_take > 0
+            else np.array([], dtype=np.int64)
+        )
 
         out: List[Dict[str, Any]] = []
         for i in idxs:

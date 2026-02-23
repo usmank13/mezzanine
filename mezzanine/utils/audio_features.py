@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Lightweight audio feature extraction for small demos/tests."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Tuple

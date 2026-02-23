@@ -3,19 +3,25 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import asdict
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 
 from ..encoders.lj import (
-    LJFlattenEncoder, LJFlattenEncoderConfig,
-    LJRDFEncoder, LJRDFEncoderConfig,
+    LJFlattenEncoder,
+    LJFlattenEncoderConfig,
+    LJRDFEncoder,
+    LJRDFEncoderConfig,
 )
 from ..symmetries.lj import (
-    LJSE3Symmetry, LJSE3Config,
-    LJPermutationSymmetry, LJPermutationConfig,
-    LJImageChoiceSymmetry, LJImageChoiceConfig,
-    LJCoordinateNoiseSymmetry, LJCoordinateNoiseConfig,
+    LJSE3Symmetry,
+    LJSE3Config,
+    LJPermutationSymmetry,
+    LJPermutationConfig,
+    LJImageChoiceSymmetry,
+    LJImageChoiceConfig,
+    LJCoordinateNoiseSymmetry,
+    LJCoordinateNoiseConfig,
 )
 from ..pipelines.text_distill import (
     MLPHeadConfig,
@@ -43,7 +49,6 @@ def build_views(
     K: int,
 ) -> List[List[Dict[str, Any]]]:
     """Return list of K view-lists, each view-list is examples for all items."""
-    N = len(xs)
     views: List[List[Dict[str, Any]]] = [list(xs)]
     if K <= 1:
         return views
@@ -58,10 +63,26 @@ def build_views(
     return views
 
 
-def _cached_encode(*, cache, world_fp: str, enc_fp: str, split: str, tag: str, extra: Dict[str, Any], encoder, batch: List[Any]) -> np.ndarray:
+def _cached_encode(
+    *,
+    cache,
+    world_fp: str,
+    enc_fp: str,
+    split: str,
+    tag: str,
+    extra: Dict[str, Any],
+    encoder,
+    batch: List[Any],
+) -> np.ndarray:
     if cache is None:
         return encoder.encode(batch)
-    key = cache.make_key(world_fingerprint=world_fp, encoder_fingerprint=enc_fp, split=split, tag=tag, extra=extra)
+    key = cache.make_key(
+        world_fingerprint=world_fp,
+        encoder_fingerprint=enc_fp,
+        split=split,
+        tag=tag,
+        extra=extra,
+    )
     got = cache.get(key)
     if got is not None:
         arr, _meta = got
@@ -80,25 +101,67 @@ class LJFluidDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Dataset
-        p.add_argument("--dataset", type=str, required=True, help="Path to HDF5 dataset (from examples/lj_generate_dataset.py)")
-        p.add_argument("--label_field", type=str, default="state_id", choices=["state_id", "phase"])
+        p.add_argument(
+            "--dataset",
+            type=str,
+            required=True,
+            help="Path to HDF5 dataset (from examples/lj_generate_dataset.py)",
+        )
+        p.add_argument(
+            "--label_field", type=str, default="state_id", choices=["state_id", "phase"]
+        )
         p.add_argument("--n_train", type=int, default=20000)
         p.add_argument("--n_test", type=int, default=5000)
-        p.add_argument("--state_ids", type=int, nargs="+", default=None, help="Optional subset of state_id values")
+        p.add_argument(
+            "--state_ids",
+            type=int,
+            nargs="+",
+            default=None,
+            help="Optional subset of state_id values",
+        )
 
         # Symmetries / views
         p.add_argument("--k_train", type=int, default=8)
         p.add_argument("--k_test", type=int, default=16)
-        p.add_argument("--no_se3", action="store_true", help="Disable global rotation+translation symmetry")
-        p.add_argument("--no_perm", action="store_true", help="Disable particle permutation symmetry")
-        p.add_argument("--no_image", action="store_true", help="Disable per-particle periodic image-choice symmetry")
-        p.add_argument("--noise_sigma", type=float, default=0.0, help="Stddev of coordinate noise symmetry (0 disables)")
-        p.add_argument("--image_max", type=int, default=1, help="Max integer image shift per axis (if image symmetry enabled)")
+        p.add_argument(
+            "--no_se3",
+            action="store_true",
+            help="Disable global rotation+translation symmetry",
+        )
+        p.add_argument(
+            "--no_perm",
+            action="store_true",
+            help="Disable particle permutation symmetry",
+        )
+        p.add_argument(
+            "--no_image",
+            action="store_true",
+            help="Disable per-particle periodic image-choice symmetry",
+        )
+        p.add_argument(
+            "--noise_sigma",
+            type=float,
+            default=0.0,
+            help="Stddev of coordinate noise symmetry (0 disables)",
+        )
+        p.add_argument(
+            "--image_max",
+            type=int,
+            default=1,
+            help="Max integer image shift per axis (if image symmetry enabled)",
+        )
 
         # Encoder
-        p.add_argument("--encoder", type=str, default="lj_flatten", choices=["lj_flatten", "lj_rdf"])
+        p.add_argument(
+            "--encoder",
+            type=str,
+            default="lj_flatten",
+            choices=["lj_flatten", "lj_rdf"],
+        )
         # Flatten
-        p.add_argument("--center", type=str, default="box", choices=["none", "box", "mean"])
+        p.add_argument(
+            "--center", type=str, default="box", choices=["none", "box", "mean"]
+        )
         p.add_argument("--scale_by_box", action="store_true")
         # RDF
         p.add_argument("--rdf_bins", type=int, default=128)
@@ -121,6 +184,7 @@ class LJFluidDistillRecipe(Recipe):
         ctx = self.build_context(args)
         # Torch is optional at import time, but required here.
         import torch  # type: ignore
+
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Adapter
@@ -146,7 +210,9 @@ class LJFluidDistillRecipe(Recipe):
 
         # Encoder
         if str(args.encoder) == "lj_flatten":
-            enc_cfg = LJFlattenEncoderConfig(center=str(args.center), scale_by_box=bool(args.scale_by_box))
+            enc_cfg = LJFlattenEncoderConfig(
+                center=str(args.center), scale_by_box=bool(args.scale_by_box)
+            )
             encoder = LJFlattenEncoder(enc_cfg)
         else:
             enc_cfg = LJRDFEncoderConfig(
@@ -161,15 +227,25 @@ class LJFluidDistillRecipe(Recipe):
         # Symmetries
         symmetries: List[Any] = []
         if not bool(args.no_se3):
-            symmetries.append(LJSE3Symmetry(LJSE3Config(rotate=True, translate=True, wrap=True)))
+            symmetries.append(
+                LJSE3Symmetry(LJSE3Config(rotate=True, translate=True, wrap=True))
+            )
         if not bool(args.no_perm):
             symmetries.append(LJPermutationSymmetry(LJPermutationConfig()))
         if not bool(args.no_image):
-            symmetries.append(LJImageChoiceSymmetry(LJImageChoiceConfig(max_image=int(args.image_max), wrap_after=False)))
+            symmetries.append(
+                LJImageChoiceSymmetry(
+                    LJImageChoiceConfig(max_image=int(args.image_max), wrap_after=False)
+                )
+            )
         if float(args.noise_sigma) > 0:
             # If we also use image-choice, do NOT wrap, else it cancels the image shift.
             wrap = bool(args.no_image)
-            symmetries.append(LJCoordinateNoiseSymmetry(LJCoordinateNoiseConfig(sigma=float(args.noise_sigma), wrap=wrap)))
+            symmetries.append(
+                LJCoordinateNoiseSymmetry(
+                    LJCoordinateNoiseConfig(sigma=float(args.noise_sigma), wrap=wrap)
+                )
+            )
 
         # Canonical embeddings
         Z_train = _cached_encode(
@@ -229,7 +305,9 @@ class LJFluidDistillRecipe(Recipe):
         base_acc = accuracy(P_base_test_canon, y_test)
 
         # Build symmetry views for test and compute warrant gap
-        test_views = build_views(test, symmetries=symmetries, seed=int(args.seed) + 123, K=int(args.k_test))
+        test_views = build_views(
+            test, symmetries=symmetries, seed=int(args.seed) + 123, K=int(args.k_test)
+        )
         Z_test_views: List[np.ndarray] = [Z_test]
         for j in range(1, int(args.k_test)):
             Zj = _cached_encode(
@@ -238,16 +316,24 @@ class LJFluidDistillRecipe(Recipe):
                 enc_fp=enc_fp,
                 split="test",
                 tag=f"view_{j}",
-                extra={"k": int(args.k_test), "j": j, "symmetries": [getattr(nu, "NAME", str(nu)) for nu in symmetries]},
+                extra={
+                    "k": int(args.k_test),
+                    "j": j,
+                    "symmetries": [getattr(nu, "NAME", str(nu)) for nu in symmetries],
+                },
                 encoder=encoder,
                 batch=test_views[j],
             )
             Z_test_views.append(Zj)
-        P_views = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1)
+        P_views = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )
         gap_base = warrant_gap_from_views(P_views)
 
         # Teacher expectation on train views
-        train_views = build_views(train, symmetries=symmetries, seed=int(args.seed) + 999, K=int(args.k_train))
+        train_views = build_views(
+            train, symmetries=symmetries, seed=int(args.seed) + 999, K=int(args.k_train)
+        )
         Z_train_views: List[np.ndarray] = [Z_train]
         for j in range(1, int(args.k_train)):
             Zj = _cached_encode(
@@ -256,12 +342,19 @@ class LJFluidDistillRecipe(Recipe):
                 enc_fp=enc_fp,
                 split="train",
                 tag=f"view_{j}",
-                extra={"k": int(args.k_train), "j": j, "symmetries": [getattr(nu, "NAME", str(nu)) for nu in symmetries]},
+                extra={
+                    "k": int(args.k_train),
+                    "j": j,
+                    "symmetries": [getattr(nu, "NAME", str(nu)) for nu in symmetries],
+                },
                 encoder=encoder,
                 batch=train_views[j],
             )
             Z_train_views.append(Zj)
-        P_train_views = np.stack([predict_proba(base_head, Zj, device=device) for Zj in Z_train_views], axis=1)
+        P_train_views = np.stack(
+            [predict_proba(base_head, Zj, device=device) for Zj in Z_train_views],
+            axis=1,
+        )
         P_teacher = P_train_views.mean(axis=1)
 
         # Train student head to match teacher on canonical embeddings
@@ -284,7 +377,9 @@ class LJFluidDistillRecipe(Recipe):
         stud_acc = accuracy(P_stud_test_canon, y_test)
 
         # Student gap across same view embeddings
-        P_stud_views = np.stack([predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1)
+        P_stud_views = np.stack(
+            [predict_proba(stud_head, Zj, device=device) for Zj in Z_test_views], axis=1
+        )
         gap_stud = warrant_gap_from_views(P_stud_views)
 
         # Save a tiny payload for GIF/HTML viz (one example across symmetry views)
@@ -292,25 +387,33 @@ class LJFluidDistillRecipe(Recipe):
             i0 = 0
             y0 = int(y_test[i0])
             box0 = float(test_views[0][i0]["box"])
-            pos0 = np.stack([np.asarray(test_views[j][i0]["pos"], dtype=np.float32) for j in range(len(test_views))], axis=0)
+            pos0 = np.stack(
+                [
+                    np.asarray(test_views[j][i0]["pos"], dtype=np.float32)
+                    for j in range(len(test_views))
+                ],
+                axis=0,
+            )
             p_base0 = np.asarray(P_views[i0], dtype=np.float32)
             p_stud0 = np.asarray(P_stud_views[i0], dtype=np.float32)
-            np.savez_compressed(ctx.out_dir / "viz_payload.npz",
-                                pos=pos0,
-                                box=np.array([box0], dtype=np.float32),
-                                y=np.array([y0], dtype=np.int64),
-                                p_base=p_base0,
-                                p_stud=p_stud0)
+            np.savez_compressed(
+                ctx.out_dir / "viz_payload.npz",
+                pos=pos0,
+                box=np.array([box0], dtype=np.float32),
+                y=np.array([y0], dtype=np.int64),
+                p_base=p_base0,
+                p_stud=p_stud0,
+            )
         except Exception:
             pass
 
         base_gap = float(gap_base["mean_tv_to_mean"])
         stud_gap = float(gap_stud["mean_tv_to_mean"])
-        base_pw  = float(gap_base["mean_pairwise_tv"])
-        stud_pw  = float(gap_stud["mean_pairwise_tv"])
+        base_pw = float(gap_base["mean_pairwise_tv"])
+        stud_pw = float(gap_stud["mean_pairwise_tv"])
 
         tv_rel_improve = float((base_gap - stud_gap) / max(1e-9, base_gap))
-        pw_rel_improve = float((base_pw  - stud_pw)  / max(1e-9, base_pw))
+        pw_rel_improve = float((base_pw - stud_pw) / max(1e-9, base_pw))
         rel_improve = float(max(tv_rel_improve, pw_rel_improve))
 
         acc_drop = float(base_acc - stud_acc)
@@ -328,7 +431,9 @@ class LJFluidDistillRecipe(Recipe):
                 "label_field": str(args.label_field),
                 "n_train": int(args.n_train),
                 "n_test": int(args.n_test),
-                "state_ids": list(args.state_ids) if args.state_ids is not None else None,
+                "state_ids": list(args.state_ids)
+                if args.state_ids is not None
+                else None,
                 "meta": meta,
             },
             "encoder": {

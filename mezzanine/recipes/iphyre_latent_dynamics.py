@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
@@ -29,7 +28,12 @@ class IPhyreLatentDynamicsRecipe(Recipe):
         self.add_common_args(p)
 
         # World / data
-        p.add_argument("--games", type=str, default="hole,seesaw", help="Comma-separated I-PHYRE games")
+        p.add_argument(
+            "--games",
+            type=str,
+            default="hole,seesaw",
+            help="Comma-separated I-PHYRE games",
+        )
         p.add_argument("--n_train", type=int, default=3000)
         p.add_argument("--n_test", type=int, default=768)
         p.add_argument("--max_steps", type=int, default=260)
@@ -37,16 +41,36 @@ class IPhyreLatentDynamicsRecipe(Recipe):
         p.add_argument("--sim_dt", type=float, default=0.1)
 
         # Action / symmetry knobs
-        p.add_argument("--action_scheme", type=str, default="single", choices=["single", "window"],
-                       help="single click vs windowed action representation (window uses per_episode_samples > 1).")
-        p.add_argument("--action_prob", type=float, default=0.08, help="Probability of a random click per step (data generation).")
-        p.add_argument("--p_no_action", type=float, default=0.35, help="Fraction of training examples forced to have no action.")
+        p.add_argument(
+            "--action_scheme",
+            type=str,
+            default="single",
+            choices=["single", "window"],
+            help="single click vs windowed action representation (window uses per_episode_samples > 1).",
+        )
+        p.add_argument(
+            "--action_prob",
+            type=float,
+            default=0.08,
+            help="Probability of a random click per step (data generation).",
+        )
+        p.add_argument(
+            "--p_no_action",
+            type=float,
+            default=0.35,
+            help="Fraction of training examples forced to have no action.",
+        )
 
         # Encoder knobs
         p.add_argument("--ijepa_model", type=str, default="facebook/ijepa_vith14_1k")
         p.add_argument("--encode_bs", type=int, default=32)
         p.add_argument("--no_fp16", action="store_true")
-        p.add_argument("--embed_mode", type=str, default="mean_std", choices=["cls", "mean", "mean_std"])
+        p.add_argument(
+            "--embed_mode",
+            type=str,
+            default="mean_std",
+            choices=["cls", "mean", "mean_std"],
+        )
         p.add_argument("--embed_layer", type=int, default=-4)
 
         # Training knobs
@@ -104,7 +128,9 @@ class IPhyreLatentDynamicsRecipe(Recipe):
 
         imgs_train_t = [ex["img_t"] for ex in train]
         imgs_train_tp = [ex["img_tp"] for ex in train]
-        a_train = np.stack([ex["action_feat"] for ex in train], axis=0).astype(np.float32)
+        a_train = np.stack([ex["action_feat"] for ex in train], axis=0).astype(
+            np.float32
+        )
 
         imgs_test_t = [ex["img_t"] for ex in test]
         imgs_test_tp = [ex["img_tp"] for ex in test]
@@ -117,7 +143,10 @@ class IPhyreLatentDynamicsRecipe(Recipe):
                     encoder_fingerprint=enc_fp,
                     split="train",
                     tag="z_t",
-                    extra={"embed_mode": args.embed_mode, "embed_layer": args.embed_layer},
+                    extra={
+                        "embed_mode": args.embed_mode,
+                        "embed_layer": args.embed_layer,
+                    },
                 ),
                 lambda: enc.encode(imgs_train_t),
                 meta={"n": len(imgs_train_t), "world_fp": world_fp, "enc_fp": enc_fp},
@@ -128,7 +157,11 @@ class IPhyreLatentDynamicsRecipe(Recipe):
                     encoder_fingerprint=enc_fp,
                     split="train",
                     tag="z_tp",
-                    extra={"embed_mode": args.embed_mode, "embed_layer": args.embed_layer, "delta_seconds": args.delta_seconds},
+                    extra={
+                        "embed_mode": args.embed_mode,
+                        "embed_layer": args.embed_layer,
+                        "delta_seconds": args.delta_seconds,
+                    },
                 ),
                 lambda: enc.encode(imgs_train_tp),
                 meta={"n": len(imgs_train_tp), "world_fp": world_fp, "enc_fp": enc_fp},
@@ -139,7 +172,10 @@ class IPhyreLatentDynamicsRecipe(Recipe):
                     encoder_fingerprint=enc_fp,
                     split="test",
                     tag="z_t",
-                    extra={"embed_mode": args.embed_mode, "embed_layer": args.embed_layer},
+                    extra={
+                        "embed_mode": args.embed_mode,
+                        "embed_layer": args.embed_layer,
+                    },
                 ),
                 lambda: enc.encode(imgs_test_t),
                 meta={"n": len(imgs_test_t), "world_fp": world_fp, "enc_fp": enc_fp},
@@ -150,7 +186,11 @@ class IPhyreLatentDynamicsRecipe(Recipe):
                     encoder_fingerprint=enc_fp,
                     split="test",
                     tag="z_tp",
-                    extra={"embed_mode": args.embed_mode, "embed_layer": args.embed_layer, "delta_seconds": args.delta_seconds},
+                    extra={
+                        "embed_mode": args.embed_mode,
+                        "embed_layer": args.embed_layer,
+                        "delta_seconds": args.delta_seconds,
+                    },
                 ),
                 lambda: enc.encode(imgs_test_tp),
                 meta={"n": len(imgs_test_tp), "world_fp": world_fp, "enc_fp": enc_fp},
@@ -161,7 +201,6 @@ class IPhyreLatentDynamicsRecipe(Recipe):
             z_test_t = enc.encode(imgs_test_t)
             z_test_tp = enc.encode(imgs_test_tp)
 
-
         # --- Predictors + evaluation ---
         cfg = LatentDynamicsTrainConfig(
             steps=int(args.train_steps),
@@ -171,15 +210,18 @@ class IPhyreLatentDynamicsRecipe(Recipe):
             depth=int(args.depth),
         )
 
-        train_out = train_latent_dynamics(z_train_t, z_train_tp, a_train, cfg, device=device)
+        train_out = train_latent_dynamics(
+            z_train_t, z_train_tp, a_train, cfg, device=device
+        )
 
-        ev = eval_latent_dynamics(train_out, z_test_t, z_test_tp, a_test, device=device, seed=int(args.seed))
+        ev = eval_latent_dynamics(
+            train_out, z_test_t, z_test_tp, a_test, device=device, seed=int(args.seed)
+        )
 
         # --- Visuals ---
         save_montage(data["test"], out_dir / "montage.png", n_rows=8, thumb=192)
         plot_diagnostics(ev, out_dir / "diagnostics.png")
 
-        
         def _flatten(prefix: str, obj: Any, out: Dict[str, float]) -> None:
             if isinstance(obj, dict):
                 for kk, vv in obj.items():
@@ -193,8 +235,17 @@ class IPhyreLatentDynamicsRecipe(Recipe):
         result = {
             "exp": "iphyre_latent_dynamics",
             "device": device,
-            "world": {"adapter": "iphyre", "fingerprint": world_fp, "config": w_cfg.__dict__, "meta": data["meta"]},
-            "encoder": {"name": "hf_vision", "fingerprint": enc_fp, "config": enc_cfg.__dict__},
+            "world": {
+                "adapter": "iphyre",
+                "fingerprint": world_fp,
+                "config": w_cfg.__dict__,
+                "meta": data["meta"],
+            },
+            "encoder": {
+                "name": "hf_vision",
+                "fingerprint": enc_fp,
+                "config": enc_cfg.__dict__,
+            },
             "metrics": ev["metrics"],
             "deltas": ev["deltas"],
             "make_break": ev["make_break"],
@@ -213,7 +264,9 @@ class IPhyreLatentDynamicsRecipe(Recipe):
             _flatten("metrics/", result["metrics"], flat)
             _flatten("deltas/", result["deltas"], flat)
             ctx.logger.log_metrics(flat)
-            ctx.logger.log_text("make_break/verdict", str(result["make_break"].get("verdict", "")))
+            ctx.logger.log_text(
+                "make_break/verdict", str(result["make_break"].get("verdict", ""))
+            )
             ctx.logger.log_artifact(out_dir / "results.json", name="results.json")
             ctx.logger.log_artifact(out_dir / "diagnostics.png", name="diagnostics.png")
             ctx.logger.log_artifact(out_dir / "montage.png", name="montage.png")

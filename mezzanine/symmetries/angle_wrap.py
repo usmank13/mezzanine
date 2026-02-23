@@ -26,7 +26,9 @@ class AngleWrapConfig:
 class AngleWrapSymmetry(Symmetry):
     CONFIG_CLS = AngleWrapConfig
     NAME = "angle_wrap"
-    DESCRIPTION = "Angle wrap: x[field] -> x[field] + k*period with k in [-max_k,max_k]."
+    DESCRIPTION = (
+        "Angle wrap: x[field] -> x[field] + k*period with k in [-max_k,max_k]."
+    )
 
     def __init__(self, config: AngleWrapConfig):
         self.config = config
@@ -37,6 +39,8 @@ class AngleWrapSymmetry(Symmetry):
         rng = np.random.default_rng(int(seed))
         k = int(rng.integers(-int(self.config.max_k), int(self.config.max_k) + 1))
         out = dict(x)
-        out[self.config.field] = float(out[self.config.field]) + float(self.config.period) * float(k)
+        out[self.config.field] = float(out[self.config.field]) + float(
+            self.config.period
+        ) * float(k)
         out["_wrap_k"] = k
         return out

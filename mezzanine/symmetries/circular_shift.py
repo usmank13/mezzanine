@@ -22,7 +22,9 @@ class CircularShiftConfig:
 class CircularShiftSymmetry(Symmetry):
     CONFIG_CLS = CircularShiftConfig
     NAME = "circular_shift"
-    DESCRIPTION = "Circular shift: roll x[key] by a random integer shift (stores _shift)."
+    DESCRIPTION = (
+        "Circular shift: roll x[key] by a random integer shift (stores _shift)."
+    )
 
     def __init__(self, config: CircularShiftConfig):
         self.config = config
@@ -32,7 +34,9 @@ class CircularShiftSymmetry(Symmetry):
             return x
         arr = np.asarray(x[self.config.key])
         rng = np.random.default_rng(int(seed))
-        s = int(rng.integers(-int(self.config.max_shift), int(self.config.max_shift) + 1))
+        s = int(
+            rng.integers(-int(self.config.max_shift), int(self.config.max_shift) + 1)
+        )
         out = dict(x)
         out[self.config.key] = np.roll(arr, shift=s, axis=int(self.config.axis))
         out["_shift"] = s

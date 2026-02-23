@@ -41,7 +41,9 @@ def _featurize(xs: List[Dict[str, Any]]) -> np.ndarray:
 
 
 def _targets(xs: List[Dict[str, Any]]) -> np.ndarray:
-    return np.stack([np.asarray(ex["y"], dtype=np.float32).reshape(2) for ex in xs], axis=0)
+    return np.stack(
+        [np.asarray(ex["y"], dtype=np.float32).reshape(2) for ex in xs], axis=0
+    )
 
 
 def _wrap_to_pi(a: np.ndarray) -> np.ndarray:
@@ -61,7 +63,14 @@ class KeplerRootDistillRecipe(Recipe):
         self.add_common_args(p)
 
         # Data
-        p.add_argument("--dataset", "--data", dest="dataset", type=str, required=True, help="Path to kepler .npz")
+        p.add_argument(
+            "--dataset",
+            "--data",
+            dest="dataset",
+            type=str,
+            required=True,
+            help="Path to kepler .npz",
+        )
         p.add_argument("--n_train", type=int, default=50000)
         p.add_argument("--n_test", type=int, default=10000)
 
@@ -139,13 +148,18 @@ class KeplerRootDistillRecipe(Recipe):
         mse_test = float(np.mean((yhat_test - y_test) ** 2))
 
         # Symmetry views on test
-        sym = AngleWrapSymmetry(AngleWrapConfig(field="M", period=float(2.0 * np.pi), max_k=int(args.max_k)))
+        sym = AngleWrapSymmetry(
+            AngleWrapConfig(field="M", period=float(2.0 * np.pi), max_k=int(args.max_k))
+        )
         preds_views: List[np.ndarray] = []
         for j in range(int(args.k_test)):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
             preds_views.append(predict(teacher, _featurize(view), device=device))
         teacher_gap = warrant_gap_regression(np.stack(preds_views, axis=0))
 
@@ -156,7 +170,10 @@ class KeplerRootDistillRecipe(Recipe):
             if j == 0:
                 view = train
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j)) for i, ex in enumerate(train)]
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 999, i, j))
+                    for i, ex in enumerate(train)
+                ]
             train_views.append(view)
             preds_train_views.append(predict(teacher, _featurize(view), device=device))
 
@@ -190,13 +207,19 @@ class KeplerRootDistillRecipe(Recipe):
             if j == 0:
                 view = test
             else:
-                view = [sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j)) for i, ex in enumerate(test)]
-            preds_student_views.append(predict(student, _featurize(view), device=device))
+                view = [
+                    sym.sample(ex, seed=_view_seed(int(args.seed) + 123, i, j))
+                    for i, ex in enumerate(test)
+                ]
+            preds_student_views.append(
+                predict(student, _featurize(view), device=device)
+            )
         student_gap = warrant_gap_regression(np.stack(preds_student_views, axis=0))
 
         # Kepler residual diagnostics (uses principal-value E from atan2)
         e_test = np.array([float(ex["e"]) for ex in test], dtype=np.float32)
         M_test = np.array([float(ex["M"]) for ex in test], dtype=np.float32)
+
         def residual_from_sincos(pred: np.ndarray) -> float:
             s = pred[:, 0]
             c = pred[:, 1]
@@ -239,7 +262,11 @@ class KeplerRootDistillRecipe(Recipe):
                     "kepler_abs_residual": student_kepler_resid,
                 }
             },
-            "distill": {"k_train": int(args.k_train), "k_test": int(args.k_test), "max_k": int(args.max_k)},
+            "distill": {
+                "k_train": int(args.k_train),
+                "k_test": int(args.k_test),
+                "max_k": int(args.max_k),
+            },
             "make_break": {
                 "criterion": {
                     "gap_mse reduces by >=20%": bool(gap_improves),

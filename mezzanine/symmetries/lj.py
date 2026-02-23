@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """MD-specific symmetries for Lennard–Jones (LJ) atomic systems.
 
 These symmetries are *physically irrelevant* degrees of freedom for an isotropic
@@ -19,11 +17,14 @@ Each symmetry maps an example dict:
 to a new example dict with transformed coordinates.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Dict
 
 import numpy as np
 
+from ..registry import SYMMETRIES
 from .base import Symmetry
 
 
@@ -155,7 +156,9 @@ class LJCoordinateNoiseConfig:
 
 class LJCoordinateNoiseSymmetry(Symmetry):
     NAME = "lj_coord_noise"
-    DESCRIPTION = "Add small Gaussian noise to positions (measurement/roundoff symmetry)."
+    DESCRIPTION = (
+        "Add small Gaussian noise to positions (measurement/roundoff symmetry)."
+    )
 
     def __init__(self, cfg: LJCoordinateNoiseConfig | None = None):
         self.cfg = cfg or LJCoordinateNoiseConfig()
@@ -176,8 +179,6 @@ class LJCoordinateNoiseSymmetry(Symmetry):
 
 
 # Register
-from ..registry import SYMMETRIES
-
 SYMMETRIES.register("lj_permutation")(LJPermutationSymmetry)
 SYMMETRIES.register("lj_se3")(LJSE3Symmetry)
 SYMMETRIES.register("lj_image_choice")(LJImageChoiceSymmetry)
