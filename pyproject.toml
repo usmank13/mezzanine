@@ -63,6 +63,9 @@ tensorboard = ["tensorboard>=2.15"]
 # Dev
 dev = ["pytest>=7.4", "ruff>=0.5", "mypy>=1.8"]
 
+# Kernels (optional)
+kernels = ["triton"]
+
 all = [
   "pyyaml>=6.0",
   "datasets>=2.17",
@@ -92,6 +95,9 @@ include = ["mezzanine*"]
 [tool.ruff]
 target-version = "py39"
 line-length = 88
+extend-exclude = [
+  "mezzanine/kernels/pearl_pow_kernels/**",
+]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
