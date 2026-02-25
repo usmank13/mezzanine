@@ -1,0 +1,5 @@
+slice_file_name,fold,classID,class
+car_0.wav,1,0,car_horn
+car_1.wav,2,0,car_horn
+siren_0.wav,1,1,siren
+siren_1.wav,2,1,siren

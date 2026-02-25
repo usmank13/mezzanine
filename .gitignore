@@ -1,0 +1,18 @@
+# Large binary files
+*.pt
+*.safetensors
+
+# Output directories (keep results + visualizations only)
+out_*/image_cache/
+out_*/student_model/
+out_depth_consistency/
+out_depth_distilled/
+
+# Test images (large, downloaded from COCO)
+test_images/*.jpg
+test_images/*.png
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/

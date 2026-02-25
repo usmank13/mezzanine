@@ -1,0 +1,20 @@
+# Example config for `mezzanine run iphyre_latent_dynamics --config configs/iphyre.yml`
+
+games: hole,seesaw
+n_train: 3000
+n_test: 768
+delta_seconds: 4.0
+sim_dt: 0.1
+
+# Encoder
+ijepa_model: facebook/ijepa_vith14_1k
+embed_mode: mean_std
+embed_layer: -4
+encode_bs: 32
+
+# Training
+train_steps: 800
+train_bs: 256
+train_lr: 1e-3
+hidden: 1024
+depth: 2

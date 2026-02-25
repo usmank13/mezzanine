@@ -1,0 +1,121 @@
+{
+  "config": {
+    "model": "depth-anything/Depth-Anything-V2-Small-hf",
+    "subgroup": "d4",
+    "elements": [
+      "identity",
+      "rot90",
+      "rot180",
+      "rot270",
+      "vflip",
+      "hflip",
+      "transpose",
+      "anti-transpose"
+    ],
+    "n_images": 12
+  },
+  "per_image": [
+    {
+      "mean_std": 0.32612845301628113,
+      "mean_cv": 0.13647128641605377,
+      "max_std": 1.229648232460022,
+      "vertical_bias_original": 0.17333778161467872,
+      "vertical_bias_averaged": 0.22873950303887552,
+      "image": "coco_desk_topdown"
+    },
+    {
+      "mean_std": 0.3364580273628235,
+      "mean_cv": 0.12925204634666443,
+      "max_std": 1.538336992263794,
+      "vertical_bias_original": 0.9289662802222777,
+      "vertical_bias_averaged": 0.932038753953692,
+      "image": "coco_skateboard"
+    },
+    {
+      "mean_std": 0.5981208682060242,
+      "mean_cv": 0.19156265258789062,
+      "max_std": 2.0517897605895996,
+      "vertical_bias_original": 0.9449299001794474,
+      "vertical_bias_averaged": 0.9444846388690076,
+      "image": "coco_street_overhead"
+    },
+    {
+      "mean_std": 0.5288026928901672,
+      "mean_cv": 0.3830200135707855,
+      "max_std": 2.04532527923584,
+      "vertical_bias_original": 0.9463864838108267,
+      "vertical_bias_averaged": 0.8352613142051117,
+      "image": "coco_bus_side"
+    },
+    {
+      "mean_std": 0.2728174030780792,
+      "mean_cv": 0.15005303919315338,
+      "max_std": 1.0580466985702515,
+      "vertical_bias_original": 0.9588023525084355,
+      "vertical_bias_averaged": 0.9448703172982812,
+      "image": "coco_train_side"
+    },
+    {
+      "mean_std": 0.449992299079895,
+      "mean_cv": 0.21577869355678558,
+      "max_std": 1.4988933801651,
+      "vertical_bias_original": 0.9780895278096331,
+      "vertical_bias_averaged": 0.9936064995529972,
+      "image": "coco_bathroom"
+    },
+    {
+      "mean_std": 0.20502996444702148,
+      "mean_cv": 0.35994014143943787,
+      "max_std": 1.4308302402496338,
+      "vertical_bias_original": -0.49078426695552874,
+      "vertical_bias_averaged": -0.6710021120094005,
+      "image": "coco_living_room"
+    },
+    {
+      "mean_std": 0.1945810467004776,
+      "mean_cv": 0.3482840359210968,
+      "max_std": 2.0011746883392334,
+      "vertical_bias_original": 0.1687541690644971,
+      "vertical_bias_averaged": 0.10321023829022109,
+      "image": "coco_mountain"
+    },
+    {
+      "mean_std": 0.2644931674003601,
+      "mean_cv": 0.2556762397289276,
+      "max_std": 1.558224081993103,
+      "vertical_bias_original": 0.8735604865186488,
+      "vertical_bias_averaged": 0.8808078586893061,
+      "image": "coco_clock"
+    },
+    {
+      "mean_std": 0.3837614953517914,
+      "mean_cv": 0.31720104813575745,
+      "max_std": 1.9035992622375488,
+      "vertical_bias_original": 0.8905022405809236,
+      "vertical_bias_averaged": 0.9179791605658868,
+      "image": "coco_bear"
+    },
+    {
+      "mean_std": 0.7396081686019897,
+      "mean_cv": 0.8735533952713013,
+      "max_std": 2.356039524078369,
+      "vertical_bias_original": 0.9596784301827032,
+      "vertical_bias_averaged": 0.979153785758295,
+      "image": "coco_giraffe_up"
+    },
+    {
+      "mean_std": 0.21009358763694763,
+      "mean_cv": 0.2333182692527771,
+      "max_std": 1.9358428716659546,
+      "vertical_bias_original": 0.7120488152382725,
+      "vertical_bias_averaged": 0.7039523885292355,
+      "image": "coco_boat"
+    }
+  ],
+  "summary": {
+    "mean_warrant_gap_cv": 0.2995092384517193,
+    "mean_vertical_bias_original": 0.7521533945571561,
+    "mean_vertical_bias_averaged": 0.7612588808966924,
+    "mean_bias_reduction": -0.009105486339536228
+  }
+}

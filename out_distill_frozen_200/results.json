@@ -1,0 +1,110 @@
+{
+  "config": {
+    "model": "depth-anything/Depth-Anything-V2-Small-hf",
+    "out": "out_distill_frozen_200",
+    "device": "cuda",
+    "n_train": 200,
+    "epochs": 300,
+    "lr": 0.001,
+    "batch_size": 16,
+    "subgroup": "d4",
+    "target_size": 37
+  },
+  "head_params": 1868801,
+  "n_train_actual": 167,
+  "training_log": [
+    {
+      "epoch": 1,
+      "loss": 0.0372132035818967
+    },
+    {
+      "epoch": 50,
+      "loss": 0.00253682166591964
+    },
+    {
+      "epoch": 100,
+      "loss": 0.0011906752585094762
+    },
+    {
+      "epoch": 150,
+      "loss": 0.0008084444403225048
+    },
+    {
+      "epoch": 200,
+      "loss": 0.00029863184317946434
+    },
+    {
+      "epoch": 250,
+      "loss": 0.00021987411442255095
+    },
+    {
+      "epoch": 300,
+      "loss": 0.0002094573216957294
+    }
+  ],
+  "eval_results": [
+    {
+      "image": "robot_01",
+      "orig_vbias": 0.8166945718200234,
+      "head_vbias": 0.3303763428477046,
+      "orbit_vbias": 0.8652190158136804,
+      "improvement": 0.48631822897231874
+    },
+    {
+      "image": "robot_02",
+      "orig_vbias": 0.9555524503486236,
+      "head_vbias": 0.200888731765113,
+      "orbit_vbias": 0.9316500732265401,
+      "improvement": 0.7546637185835106
+    },
+    {
+      "image": "robot_03",
+      "orig_vbias": -0.11890072575103448,
+      "head_vbias": -0.13538890689924693,
+      "orbit_vbias": -0.14875094376824766,
+      "improvement": -0.016488181148212447
+    },
+    {
+      "image": "robot_04",
+      "orig_vbias": 0.9940449791273755,
+      "head_vbias": 0.9364840965184804,
+      "orbit_vbias": 0.9684054547137396,
+      "improvement": 0.057560882608895136
+    },
+    {
+      "image": "robot_05",
+      "orig_vbias": 0.7352128992887743,
+      "head_vbias": -0.24455618223391595,
+      "orbit_vbias": 0.6065949813631716,
+      "improvement": 0.49065671705485836
+    },
+    {
+      "image": "coco_fruit_td",
+      "orig_vbias": 0.6376812842984281,
+      "head_vbias": -0.051941145986915155,
+      "orbit_vbias": 0.003890719318885136,
+      "improvement": 0.585740138311513
+    },
+    {
+      "image": "coco_remote_td",
+      "orig_vbias": 0.6967401319102345,
+      "head_vbias": 0.22305252598785272,
+      "orbit_vbias": 0.25476676507970997,
+      "improvement": 0.4736876059223818
+    },
+    {
+      "image": "coco_hotdog_td",
+      "orig_vbias": 0.9856558911911214,
+      "head_vbias": 0.9899879527091257,
+      "orbit_vbias": 0.9902240814832601,
+      "improvement": -0.004332061518004249
+    },
+    {
+      "image": "coco_cake_td",
+      "orig_vbias": 0.9504440917011748,
+      "head_vbias": 0.9155072194434327,
+      "orbit_vbias": 0.9226945252979457,
+      "improvement": 0.03493687225774211
+    }
+  ]
+}

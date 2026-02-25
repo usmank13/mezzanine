@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pearl-pow-kernels"
+version = "0.1.0"
+description = "Reference implementations of Pearl Polymath MatMul-PoW kernel ideas (rotation, quantization-noise, FP4 scale jitter, training-friendly wrappers, and TC-friendly hash)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.1",
+  "numpy>=1.24",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pearl_pow_kernels*"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

@@ -1,0 +1,73 @@
+{
+  "config": {
+    "model": "depth-anything/Depth-Anything-V2-Small-hf",
+    "subgroup": "d4",
+    "elements": [
+      "identity",
+      "rot90",
+      "rot180",
+      "rot270",
+      "vflip",
+      "hflip",
+      "transpose",
+      "anti-transpose"
+    ],
+    "n_images": 6
+  },
+  "per_image": [
+    {
+      "mean_std": 0.3313986361026764,
+      "mean_cv": 0.1256619244813919,
+      "max_std": 0.938709557056427,
+      "vertical_bias_original": 0.9596345663762392,
+      "vertical_bias_averaged": 0.8157306436481172,
+      "image": "coco_cats"
+    },
+    {
+      "mean_std": 0.24053768813610077,
+      "mean_cv": 0.14843107759952545,
+      "max_std": 1.521003246307373,
+      "vertical_bias_original": 0.6658924038449471,
+      "vertical_bias_averaged": 0.7557323557953963,
+      "image": "coco_baseball"
+    },
+    {
+      "mean_std": 0.2932732403278351,
+      "mean_cv": 0.13283075392246246,
+      "max_std": 1.280258297920227,
+      "vertical_bias_original": 0.3802500463924299,
+      "vertical_bias_averaged": 0.3578759074392932,
+      "image": "coco_kitchen"
+    },
+    {
+      "mean_std": 0.41800200939178467,
+      "mean_cv": 0.1843332052230835,
+      "max_std": 1.7969800233840942,
+      "vertical_bias_original": 0.9421144935700937,
+      "vertical_bias_averaged": 0.896713506819381,
+      "image": "coco_food_topdown"
+    },
+    {
+      "mean_std": 0.29421716928482056,
+      "mean_cv": 0.13819366693496704,
+      "max_std": 2.428997755050659,
+      "vertical_bias_original": 0.4331669182400239,
+      "vertical_bias_averaged": 0.0006074095159497245,
+      "image": "coco_pizza_topdown"
+    },
+    {
+      "mean_std": 0.29901957511901855,
+      "mean_cv": 0.15988144278526306,
+      "max_std": 1.2806901931762695,
+      "vertical_bias_original": 0.9431239808310379,
+      "vertical_bias_averaged": 0.9354534447491488,
+      "image": "coco_plane_sky"
+    }
+  ],
+  "summary": {
+    "mean_warrant_gap_cv": 0.1482220118244489,
+    "mean_vertical_bias_original": 0.7206970682091286,
+    "mean_vertical_bias_averaged": 0.6270188779945477,
+    "mean_bias_reduction": 0.0936781902145809
+  }
+}

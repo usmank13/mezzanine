@@ -1,0 +1,26 @@
+# LIBERO-10 (image): multi-task manipulation (LeRobot on HF)
+
+repo_id: lerobot/libero_10_image_subtask
+camera_key: observation.images.image
+action_key: action
+delta_steps: 1
+n_train: 4000
+n_test: 2000
+
+# Encoder
+ijepa_model: facebook/ijepa_vith14_1k
+embed_mode: mean_std
+embed_layer: -4
+encode_bs: 32
+
+# Training
+train_steps: 800
+train_bs: 256
+train_lr: 1e-3
+hidden: 1024
+depth: 2
+
+# Downstream planning demo
+do_planning: true
+plan_candidates: 32
+plan_eval: 512
