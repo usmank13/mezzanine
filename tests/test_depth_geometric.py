@@ -14,8 +14,8 @@ from mezzanine.symmetries.depth_geometric import (
 def _make_asymmetric(h=8, w=12):
     """Create an asymmetric image so we can detect any transform errors."""
     img = np.zeros((h, w), dtype=np.float32)
-    img[0, 0] = 1.0   # top-left marker
-    img[1, 2] = 2.0   # another unique marker
+    img[0, 0] = 1.0  # top-left marker
+    img[1, 2] = 2.0  # another unique marker
     return img
 
 
@@ -88,23 +88,23 @@ class TestDepthGeometricSymmetry:
         """Key test: if model adds a vertical gradient bias, orbit averaging should cancel it."""
         sym = DepthGeometricSymmetry(DepthGeometricSymmetryConfig(subgroup="vflip"))
         h, w = 8, 8
-        
+
         # True depth is uniform
         true_depth = np.ones((h, w), dtype=np.float32) * 5.0
-        
+
         # Model adds a vertical bias: bottom rows get +bias
         bias = np.linspace(0, 1, h).reshape(h, 1) * np.ones((1, w))
-        
+
         img = np.zeros((h, w, 3), dtype=np.uint8)  # dummy image
-        views = sym.batch(img)  # [original, vflipped]
-        
+        sym.batch(img)  # [original, vflipped]
+
         # Simulate biased model predictions for each view
         # Original view: bias goes top(0) -> bottom(1)
         pred_original = true_depth + bias.astype(np.float32)
         # Vflipped view: model still thinks bottom=closer, so bias is same direction
         # but in the flipped frame
         pred_vflipped = true_depth + bias.astype(np.float32)
-        
+
         avg = sym.orbit_average([pred_original, pred_vflipped])
         # The vertical bias should be reduced (not perfectly cancelled unless
         # the bias is exactly linear, which it is here)

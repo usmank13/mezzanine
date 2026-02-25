@@ -17,8 +17,7 @@ is truly equivariant.  The warrant gap measures how much this fails.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -28,16 +27,23 @@ from .base import Symmetry
 
 # ── D4 transforms on HWC / HW arrays ────────────────────────────────────
 
+
 def _apply_d4(img: np.ndarray, idx: int) -> np.ndarray:
     """Apply D4 group element *idx* (0-7) to an image (H,W), (H,W,C), or (C,H,W)."""
     if idx == 0:
         return img
     elif idx == 1:  # rot90 CW
-        return np.rot90(img, k=-1, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1))
+        return np.rot90(
+            img, k=-1, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
+        )
     elif idx == 2:  # rot180
-        return np.rot90(img, k=2, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1))
+        return np.rot90(
+            img, k=2, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
+        )
     elif idx == 3:  # rot270 CW
-        return np.rot90(img, k=1, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1))
+        return np.rot90(
+            img, k=1, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
+        )
     elif idx == 4:  # vflip
         return np.flip(img, axis=-2 if img.ndim == 3 and img.shape[0] <= 4 else 0)
     elif idx == 5:  # hflip
@@ -46,7 +52,9 @@ def _apply_d4(img: np.ndarray, idx: int) -> np.ndarray:
         axes = (-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
         return np.swapaxes(img, *axes)
     elif idx == 7:  # anti-transpose = rot90 + vflip
-        r = np.rot90(img, k=1, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1))
+        r = np.rot90(
+            img, k=1, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
+        )
         return np.flip(r, axis=-2 if r.ndim == 3 and r.shape[0] <= 4 else 0)
     else:
         raise ValueError(f"D4 index must be 0-7, got {idx}")
@@ -94,7 +102,8 @@ class DepthGeometricSymmetryConfig:
         "rotations" (4 rotations), "identity" (no-op, for baseline).
         Or a list of ints [0-7].
     """
-    subgroup: str | List[int] = "d4"
+
+    subgroup: str | list[int] = "d4"
 
 
 class DepthGeometricSymmetry(Symmetry):

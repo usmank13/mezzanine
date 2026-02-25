@@ -33,9 +33,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
-from typing import List
 
 import numpy as np
 from PIL import Image
@@ -90,6 +88,7 @@ def load_test_images(sources: list[str] | None) -> list[tuple[str, np.ndarray]]:
 
 # ── Warrant gap metrics ──────────────────────────────────────────────────
 
+
 def compute_warrant_gap(
     depths_aligned: list[np.ndarray],
 ) -> dict:
@@ -104,7 +103,7 @@ def compute_warrant_gap(
     """
     stack = np.stack(depths_aligned, axis=0)  # (K, H, W)
     pixel_mean = stack.mean(axis=0)  # (H, W)
-    pixel_std = stack.std(axis=0)    # (H, W)
+    pixel_std = stack.std(axis=0)  # (H, W)
 
     # Coefficient of variation (avoid div by zero)
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -135,6 +134,7 @@ def compute_warrant_gap(
 
 # ── Visualization ────────────────────────────────────────────────────────
 
+
 def save_diagnostics(
     name: str,
     original_img: np.ndarray,
@@ -145,6 +145,7 @@ def save_diagnostics(
     """Save a diagnostic image showing original, per-view depths, std map, and orbit average."""
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
@@ -204,19 +205,38 @@ def save_diagnostics(
 # ── Main ─────────────────────────────────────────────────────────────────
 
 D4_ELEMENT_NAMES = [
-    "identity", "rot90", "rot180", "rot270",
-    "vflip", "hflip", "transpose", "anti-transpose",
+    "identity",
+    "rot90",
+    "rot180",
+    "rot270",
+    "vflip",
+    "hflip",
+    "transpose",
+    "anti-transpose",
 ]
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Measure Depth Anything warrant gap under D4 symmetry")
-    parser.add_argument("--model", default="depth-anything/Depth-Anything-V2-Small-hf",
-                        help="HuggingFace model name")
-    parser.add_argument("--subgroup", default="d4", choices=["d4", "vflip", "flips", "rotations", "identity"],
-                        help="Which D4 subgroup to test")
-    parser.add_argument("--images", nargs="*", default=None,
-                        help="Image paths or 'url' for default test images")
+    parser = argparse.ArgumentParser(
+        description="Measure Depth Anything warrant gap under D4 symmetry"
+    )
+    parser.add_argument(
+        "--model",
+        default="depth-anything/Depth-Anything-V2-Small-hf",
+        help="HuggingFace model name",
+    )
+    parser.add_argument(
+        "--subgroup",
+        default="d4",
+        choices=["d4", "vflip", "flips", "rotations", "identity"],
+        help="Which D4 subgroup to test",
+    )
+    parser.add_argument(
+        "--images",
+        nargs="*",
+        default=None,
+        help="Image paths or 'url' for default test images",
+    )
     parser.add_argument("--out", default="out_depth_warrant", help="Output directory")
     parser.add_argument("--device", default="cuda", help="Device (cuda/cpu)")
     args = parser.parse_args()
@@ -229,9 +249,13 @@ def main():
 
     # Initialize model
     print(f"\nLoading {args.model} on {args.device}...")
-    from mezzanine.encoders.depth_anything import DepthAnythingEncoder, DepthAnythingEncoderConfig
+    from mezzanine.encoders.depth_anything import (
+        DepthAnythingEncoder,
+        DepthAnythingEncoderConfig,
+    )
     from mezzanine.symmetries.depth_geometric import (
-        DepthGeometricSymmetry, DepthGeometricSymmetryConfig, SUBGROUPS
+        DepthGeometricSymmetry,
+        DepthGeometricSymmetryConfig,
     )
 
     encoder = DepthAnythingEncoder(
@@ -242,13 +266,15 @@ def main():
 
     elements = sym.elements
     element_names = [D4_ELEMENT_NAMES[i] for i in elements]
-    print(f"Symmetry subgroup: {args.subgroup} ({len(elements)} elements: {element_names})")
+    print(
+        f"Symmetry subgroup: {args.subgroup} ({len(elements)} elements: {element_names})"
+    )
 
     # Measure warrant gap per image
     all_results = []
 
     for img_name, img_np in images:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Image: {img_name} ({img_np.shape[1]}×{img_np.shape[0]})")
 
         # Generate all transformed views
@@ -269,7 +295,9 @@ def main():
         print(f"  Max per-pixel std:        {metrics['max_std']:.4f}")
         print(f"  Vertical bias (original): {metrics['vertical_bias_original']:.4f}")
         print(f"  Vertical bias (averaged): {metrics['vertical_bias_averaged']:.4f}")
-        bias_reduction = abs(metrics["vertical_bias_original"]) - abs(metrics["vertical_bias_averaged"])
+        bias_reduction = abs(metrics["vertical_bias_original"]) - abs(
+            metrics["vertical_bias_averaged"]
+        )
         print(f"  Bias reduction:           {bias_reduction:+.4f}")
 
         all_results.append(metrics)
@@ -278,9 +306,9 @@ def main():
         save_diagnostics(img_name, img_np, depths_aligned, element_names, out_dir)
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     mean_cv = np.mean([r["mean_cv"] for r in all_results])
     mean_vbias_orig = np.mean([abs(r["vertical_bias_original"]) for r in all_results])
     mean_vbias_avg = np.mean([abs(r["vertical_bias_averaged"]) for r in all_results])
@@ -292,21 +320,25 @@ def main():
     # Save results
     results_path = out_dir / "results.json"
     with open(results_path, "w") as f:
-        json.dump({
-            "config": {
-                "model": args.model,
-                "subgroup": args.subgroup,
-                "elements": element_names,
-                "n_images": len(images),
+        json.dump(
+            {
+                "config": {
+                    "model": args.model,
+                    "subgroup": args.subgroup,
+                    "elements": element_names,
+                    "n_images": len(images),
+                },
+                "per_image": all_results,
+                "summary": {
+                    "mean_warrant_gap_cv": float(mean_cv),
+                    "mean_vertical_bias_original": float(mean_vbias_orig),
+                    "mean_vertical_bias_averaged": float(mean_vbias_avg),
+                    "mean_bias_reduction": float(mean_vbias_orig - mean_vbias_avg),
+                },
             },
-            "per_image": all_results,
-            "summary": {
-                "mean_warrant_gap_cv": float(mean_cv),
-                "mean_vertical_bias_original": float(mean_vbias_orig),
-                "mean_vertical_bias_averaged": float(mean_vbias_avg),
-                "mean_bias_reduction": float(mean_vbias_orig - mean_vbias_avg),
-            },
-        }, f, indent=2)
+            f,
+            indent=2,
+        )
     print(f"\nResults saved to {results_path}")
 
 

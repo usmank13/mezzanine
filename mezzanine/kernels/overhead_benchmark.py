@@ -91,8 +91,12 @@ def main() -> int:
         "torch_version": torch.__version__,
         "device": str(device),
         "dtype": str(dtype),
-        "cuda_device_name": torch.cuda.get_device_name(0) if device.type == "cuda" else None,
-        "cuda_capability": torch.cuda.get_device_capability(0) if device.type == "cuda" else None,
+        "cuda_device_name": torch.cuda.get_device_name(0)
+        if device.type == "cuda"
+        else None,
+        "cuda_capability": torch.cuda.get_device_capability(0)
+        if device.type == "cuda"
+        else None,
         "triton_available": triton_available(),
     }
     print(json.dumps(info, indent=2))
@@ -100,7 +104,9 @@ def main() -> int:
         f"sizes={sizes} warmup={args.warmup} iters={args.iters} samples={args.samples} "
         f"max_overhead_pct={args.max_overhead_pct}"
     )
-    print(f"permute_ktiles={bool(args.permute_ktiles)} noise_scale={float(args.noise_scale)}\n")
+    print(
+        f"permute_ktiles={bool(args.permute_ktiles)} noise_scale={float(args.noise_scale)}\n"
+    )
 
     results: List[Dict] = []
     failures: List[str] = []
@@ -132,38 +138,56 @@ def main() -> int:
             noise_scale=float(args.noise_scale),
         )
 
-        base_ms = bench_ms(lambda: launch_gemm_fused_inplace(A, B, ws_base), warmup=args.warmup, iters=args.iters)
+        base_ms = bench_ms(
+            lambda: launch_gemm_fused_inplace(A, B, ws_base),
+            warmup=args.warmup,
+            iters=args.iters,
+        )
         print(f"triton_baseline_gemm:    {base_ms:.3f} ms")
 
-        fused_ms = bench_ms(lambda: launch_gemm_fused_inplace(A, B, ws_fused), warmup=args.warmup, iters=args.iters)
+        fused_ms = bench_ms(
+            lambda: launch_gemm_fused_inplace(A, B, ws_fused),
+            warmup=args.warmup,
+            iters=args.iters,
+        )
         overhead = (fused_ms / base_ms - 1.0) * 100.0
         print(f"triton_fused_hash_gemm:  {fused_ms:.3f} ms  overhead={overhead:+.2f}%")
 
         if args.emit_digest:
             # One-off digest readback (not timed)
-            payload = ws_fused.hash_out.detach().cpu().numpy().tobytes(order="C") if ws_fused.hash_out.numel() else b""
+            payload = (
+                ws_fused.hash_out.detach().cpu().numpy().tobytes(order="C")
+                if ws_fused.hash_out.numel()
+                else b""
+            )
             import hashlib
 
             dig = hashlib.blake2s(payload, digest_size=16).digest()
             print(f"digest (16B) = {dig.hex()}  samples={len(ws_fused.coords3)}")
 
         if overhead > args.max_overhead_pct:
-            failures.append(f"shape={sz} overhead {overhead:.2f}% > {args.max_overhead_pct}%")
+            failures.append(
+                f"shape={sz} overhead {overhead:.2f}% > {args.max_overhead_pct}%"
+            )
 
-        results.append({
-            "shape": sz,
-            "base_ms": base_ms,
-            "fused_ms": fused_ms,
-            "overhead_pct": overhead,
-            "samples": int(args.samples),
-            "permute_ktiles": bool(args.permute_ktiles),
-            "noise_scale": float(args.noise_scale),
-        })
+        results.append(
+            {
+                "shape": sz,
+                "base_ms": base_ms,
+                "fused_ms": fused_ms,
+                "overhead_pct": overhead,
+                "samples": int(args.samples),
+                "permute_ktiles": bool(args.permute_ktiles),
+                "noise_scale": float(args.noise_scale),
+            }
+        )
         print()
 
     if args.json_out:
         with open(args.json_out, "w") as f:
-            json.dump({"env": info, "results": results, "failures": failures}, f, indent=2)
+            json.dump(
+                {"env": info, "results": results, "failures": failures}, f, indent=2
+            )
         print(f"Wrote JSON: {args.json_out}\n")
 
     if failures:

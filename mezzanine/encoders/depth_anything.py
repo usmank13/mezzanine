@@ -52,7 +52,9 @@ class DepthAnythingEncoder(Encoder):
     NAME = "depth_anything"
     DESCRIPTION = "Depth Anything V2 monocular depth (dense H×W output)."
 
-    def __init__(self, cfg: DepthAnythingEncoderConfig | None = None, device: str = "cuda"):
+    def __init__(
+        self, cfg: DepthAnythingEncoderConfig | None = None, device: str = "cuda"
+    ):
         if cfg is None:
             cfg = DepthAnythingEncoderConfig()
         self.cfg = cfg
@@ -61,7 +63,9 @@ class DepthAnythingEncoder(Encoder):
         from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
         self.processor = AutoImageProcessor.from_pretrained(cfg.model_name)
-        self.model = AutoModelForDepthEstimation.from_pretrained(cfg.model_name).to(device)
+        self.model = AutoModelForDepthEstimation.from_pretrained(cfg.model_name).to(
+            device
+        )
         self.model.eval()
 
     def fingerprint(self) -> str:
