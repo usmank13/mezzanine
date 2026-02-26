@@ -46,22 +46,132 @@ def download_coco_images(
 
     # Known valid COCO val2017 IDs
     known_ids = [
-        39769, 397133, 37777, 87470, 131131, 181859, 87875, 146457,
-        459467, 284991, 579635, 226111, 348881, 80340, 227765,
-        295316, 360661, 2587, 174004, 279541, 180135, 84270,
-        226592, 349860, 434230, 532493, 173091, 153529, 176446, 87038,
-        56350, 404484, 289393, 581929, 578489, 574769, 572678, 565778,
-        562150, 558854, 554291, 551215, 547816, 545129, 544565, 542145,
-        540763, 539715, 537991, 536947, 534827, 531968, 530854, 528399,
-        527029, 525155, 522713, 520264, 518770, 517687, 515579, 514508,
-        512194, 511321, 509735, 508602, 506656, 504711, 502737, 501523,
-        499313, 498286, 496861, 494913, 493286, 491757, 490171, 488592,
-        487583, 486479, 484792, 483108, 481404, 479248, 477118, 474854,
-        473237, 471087, 469067, 466567, 464522, 462565, 460347, 458790,
-        456559, 455483, 453860, 451478, 449406, 447313, 445365, 443303,
-        441286, 439180, 437313, 435081, 433068, 430961, 428454, 426329,
-        424551, 422886, 421023, 419096, 417779, 416343, 414673, 412894,
-        410650, 409475, 407614, 405249, 403385, 401244, 399462, 397327,
+        39769,
+        397133,
+        37777,
+        87470,
+        131131,
+        181859,
+        87875,
+        146457,
+        459467,
+        284991,
+        579635,
+        226111,
+        348881,
+        80340,
+        227765,
+        295316,
+        360661,
+        2587,
+        174004,
+        279541,
+        180135,
+        84270,
+        226592,
+        349860,
+        434230,
+        532493,
+        173091,
+        153529,
+        176446,
+        87038,
+        56350,
+        404484,
+        289393,
+        581929,
+        578489,
+        574769,
+        572678,
+        565778,
+        562150,
+        558854,
+        554291,
+        551215,
+        547816,
+        545129,
+        544565,
+        542145,
+        540763,
+        539715,
+        537991,
+        536947,
+        534827,
+        531968,
+        530854,
+        528399,
+        527029,
+        525155,
+        522713,
+        520264,
+        518770,
+        517687,
+        515579,
+        514508,
+        512194,
+        511321,
+        509735,
+        508602,
+        506656,
+        504711,
+        502737,
+        501523,
+        499313,
+        498286,
+        496861,
+        494913,
+        493286,
+        491757,
+        490171,
+        488592,
+        487583,
+        486479,
+        484792,
+        483108,
+        481404,
+        479248,
+        477118,
+        474854,
+        473237,
+        471087,
+        469067,
+        466567,
+        464522,
+        462565,
+        460347,
+        458790,
+        456559,
+        455483,
+        453860,
+        451478,
+        449406,
+        447313,
+        445365,
+        443303,
+        441286,
+        439180,
+        437313,
+        435081,
+        433068,
+        430961,
+        428454,
+        426329,
+        424551,
+        422886,
+        421023,
+        419096,
+        417779,
+        416343,
+        414673,
+        412894,
+        410650,
+        409475,
+        407614,
+        405249,
+        403385,
+        401244,
+        399462,
+        397327,
     ]
     rng.shuffle(known_ids)
 
@@ -138,12 +248,14 @@ def evaluate_model(encoder, sym, images, label=""):
         with np.errstate(divide="ignore", invalid="ignore"):
             cv = np.where(pixel_mean > 1e-8, pixel_std / pixel_mean, 0.0)
 
-        results.append({
-            "image": name,
-            "vbias": float(orig_vbias),
-            "vbias_orbit": float(orbit_vbias),
-            "mean_cv": float(cv.mean()),
-        })
+        results.append(
+            {
+                "image": name,
+                "vbias": float(orig_vbias),
+                "vbias_orbit": float(orbit_vbias),
+                "mean_cv": float(cv.mean()),
+            }
+        )
 
     if results and label:
         mean_vbias = np.mean([abs(r["vbias"]) for r in results])
@@ -152,7 +264,9 @@ def evaluate_model(encoder, sym, images, label=""):
         for r in results:
             is_td = "robot" in r["image"] or "_td" in r["image"]
             marker = "TD" if is_td else "  "
-            print(f"    {marker} {r['image']:<20} vbias={r['vbias']:+.4f}  CV={r['mean_cv']:.4f}")
+            print(
+                f"    {marker} {r['image']:<20} vbias={r['vbias']:+.4f}  CV={r['mean_cv']:.4f}"
+            )
 
     return results
 
@@ -175,7 +289,7 @@ def compute_orbit_targets(encoder, sym, images):
             elapsed = time.time() - t0
             rate = (i + 1) / elapsed
             eta = (n - i - 1) / rate
-            print(f"  [{i+1}/{n}] {rate:.1f} img/s, ETA {eta:.0f}s")
+            print(f"  [{i + 1}/{n}] {rate:.1f} img/s, ETA {eta:.0f}s")
 
     return targets
 
@@ -222,7 +336,9 @@ def train(
                 batch_targets.append(targets[name])
 
             target_sizes = [(p.height, p.width) for p in batch_pils]
-            inputs = processor(images=batch_pils, return_tensors="pt", keep_aspect_ratio=False)
+            inputs = processor(
+                images=batch_pils, return_tensors="pt", keep_aspect_ratio=False
+            )
             inputs = {k: v.to(device) for k, v in inputs.items()}
 
             outputs = model(**inputs)
@@ -295,9 +411,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Distill D4 orbit-averaged depth into Depth Anything"
     )
-    parser.add_argument(
-        "--model", default="depth-anything/Depth-Anything-V2-Small-hf"
-    )
+    parser.add_argument("--model", default="depth-anything/Depth-Anything-V2-Small-hf")
     parser.add_argument("--out", default="out_distill", help="Output directory")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--epochs", type=int, default=50)
@@ -364,7 +478,9 @@ def main():
     targets = compute_orbit_targets(encoder, sym, train_imgs)
 
     # Train
-    print(f"\nTraining: {args.epochs} epochs, lr={args.lr}, batch_size={args.batch_size}")
+    print(
+        f"\nTraining: {args.epochs} epochs, lr={args.lr}, batch_size={args.batch_size}"
+    )
     logs = train(
         model,
         processor,
