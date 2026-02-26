@@ -222,7 +222,7 @@ def train(
                 batch_targets.append(targets[name])
 
             target_sizes = [(p.height, p.width) for p in batch_pils]
-            inputs = processor(images=batch_pils, return_tensors="pt")
+            inputs = processor(images=batch_pils, return_tensors="pt", keep_aspect_ratio=False)
             inputs = {k: v.to(device) for k, v in inputs.items()}
 
             outputs = model(**inputs)
