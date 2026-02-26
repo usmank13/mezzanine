@@ -51,11 +51,10 @@ def _apply_d4(img: np.ndarray, idx: int) -> np.ndarray:
     elif idx == 6:  # transpose
         axes = (-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
         return np.swapaxes(img, *axes)
-    elif idx == 7:  # anti-transpose = rot90 + vflip
-        r = np.rot90(
-            img, k=1, axes=(-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
-        )
-        return np.flip(r, axis=-2 if r.ndim == 3 and r.shape[0] <= 4 else 0)
+    elif idx == 7:  # anti-transpose = transpose then rot180
+        axes = (-2, -1) if img.ndim == 3 and img.shape[0] <= 4 else (0, 1)
+        t = np.swapaxes(img, *axes)
+        return np.rot90(t, k=2, axes=axes)
     else:
         raise ValueError(f"D4 index must be 0-7, got {idx}")
 
